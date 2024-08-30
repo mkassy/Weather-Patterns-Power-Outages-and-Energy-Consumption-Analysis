@@ -141,8 +141,8 @@ This project is licensed under the MIT License. See the LICENSE file for details
 For any questions or collaboration inquiries, please contact:
 
     Name: Maha Haj-Kasem
-    Email: [maha.kasem@protonmail.com]
-    GitHub: [https://github.com/mkassy]
+    Email: maha.kasem@protonmail.com
+    GitHub: https://github.com/mkassy
 
 
 
