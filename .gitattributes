@@ -1,1 +1,2 @@
 data/energy/* filter=lfs diff=lfs merge=lfs -text
+data/energy/**/*.csv filter=lfs diff=lfs merge=lfs -text
