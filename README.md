@@ -37,7 +37,7 @@ The goal of this project is to explore how extreme weather conditions affect ene
 
 ### Weather Data
 
-- **Source:** NOAA Global Historical Climatology Network (GHCN)
+- **Source:** 
 - **Coverage:** 2004-01-01 to 2024-01-01
 - **Types of Data:** Temperature highs/lows, precipitation, storm frequency, etc.
 - **Format:** CSV
