@@ -37,21 +37,21 @@ The goal of this project is to explore how extreme weather conditions affect ene
 
 ### Weather Data
 
-- **Source:** 
-- **Coverage:** 2004-01-01 to 2024-01-01
+- **Source:** [NCEI](https://www.ncei.noaa.gov/cdo-web/search)
+- **Coverage:** 2014-01-01 to 2024-08-25
 - **Types of Data:** Temperature highs/lows, precipitation, storm frequency, etc.
 - **Format:** CSV
 
 ### Energy Consumption Data
 
-- **Source:** Local utility companies or government sources
-- **Coverage:** 2004-01-01 to 2024-01-01
+- **Source:** [IESO](http://reports.ieso.ca/public/HourlyConsumptionByFSA/)
+- **Coverage:** 2018-01-01 to 2024-04-23
 - **Types of Data:** Residential energy usage, segmented by time and weather conditions
 
 ### Power Outage Data
 
-- **Source:** Local utility companies or government sources
-- **Coverage:** 2004-01-01 to 2024-01-01
+- **Source:** [OEB](https://www.oeb.ca/open-data/electricity-reporting-record-keeping-requirements-rrr-section-214210-major-event-response)
+- **Coverage:** 2016-01-01 to 2023-01-01
 - **Types of Data:** Frequency, duration, and causes of power outages
 
 ## Setup
