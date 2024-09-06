@@ -169,5 +169,8 @@ cython_debug/
 
 # ignore large files
 # Ignore data directory as it contains large files
-data/
+data/**/*.csv
 
+# Other ignore rules can go here
+*.log
+*.tmp
