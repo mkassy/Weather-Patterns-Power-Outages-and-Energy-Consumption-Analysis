@@ -165,3 +165,9 @@ cython_debug/
 # include .DS_Store files in the .gitignore file
 .DS_Store
 
+
+
+# ignore large files
+# Ignore data directory as it contains large files
+data/
+
