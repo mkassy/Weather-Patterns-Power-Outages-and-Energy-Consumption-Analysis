@@ -1,5 +1,5 @@
 # import pandas as pd
-# import os
+import os
 
 
 # CLEANING DATA FOR OUTAGES
@@ -69,27 +69,33 @@
 
 
 # CLEANING DATA FOR ENERGY
-# # Define the base path to your CSV files
-# base_path = 'data/energy'
 
-# # Loop through each year directory
-# for year in range(2018, 2025):
-#     year_path = os.path.join(base_path, f'FSA_{year}')
-    
-#     # Loop through each month CSV file in the directory
-#     for file_name in os.listdir(year_path):
-#         if file_name.endswith('.csv'):
-#             file_path = os.path.join(year_path, file_name)
-            
-#             # Create a temporary file to store the cleaned data
-#             temp_file_path = file_path + '.tmp'
-            
-#             with open(file_path, 'r') as infile, open(temp_file_path, 'w') as outfile:
-#                 # Skip the first 3 lines
-#                 for i, line in enumerate(infile):
-#                     if i >= 3:
-#                         outfile.write(line)
-            
-#             # Replace the original file with the cleaned file
-#             os.replace(temp_file_path, file_path)
-#             print(f'Removed first 3 lines from {file_path}')
+# Define the base directory where your FSA_{year} directories are located
+base_dir = 'data/energy/'
+
+# Loop through each year-specific directory
+for year_dir in os.listdir(base_dir):
+    year_path = os.path.join(base_dir, year_dir)
+
+    # Ensure we are processing only directories (like FSA_2018, FSA_2019, etc.)
+    if os.path.isdir(year_path):
+        for filename in os.listdir(year_path):
+            if filename.endswith('.csv'):
+                file_path = os.path.join(year_path, filename)
+
+                # Read the CSV file and filter out invalid lines
+                with open(file_path, 'r') as file:
+                    lines = file.readlines()
+
+                # Filter out any lines starting with '\\', 'ERROR:', or lines without commas (CSV rows must have commas)
+                filtered_lines = [line for line in lines if not (
+                    line.startswith('\\') or 
+                    line.startswith('ERROR:') or
+                    not ',' in line.strip()  # Removes lines without commas (i.e., non-CSV rows)
+                )]
+
+                # Write the filtered lines back to the file
+                with open(file_path, 'w') as file:
+                    file.writelines(filtered_lines)
+
+                print(f"Processed: {file_path}")
