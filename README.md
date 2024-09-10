@@ -1,6 +1,6 @@
 # Weather-Patterns-Power-Outages-and-Energy-Consumption-Analysis
 
-This project analyzes the relationship between weather patterns, residential energy consumption, and power outages from 2004 to 2024. It aims to uncover how weather extremes impact energy use and power reliability.
+This project analyzes the relationship between weather patterns, residential energy consumption, and power outages from 2018 to 2024. It aims to uncover how weather extremes impact energy use and power reliability.
 
 ## Table of Contents
 
@@ -55,6 +55,9 @@ The goal of this project is to explore how extreme weather conditions affect ene
 - **Types of Data:** Frequency, duration, and causes of power outages
 
 ## Setup
+
+For detailed instructions on preparing the data, including downloading and organizing files, please refer to the [Data Preparation Guide](DATA_PREPARATION.md).
+
 
 ### Requirements
 
