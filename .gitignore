@@ -167,6 +167,7 @@ cython_debug/
 # ignore large files
 # Ignore data directory as it contains large files
 data/**/*.csv
+cleaned-data/**/*.csv
 
 # Other ignore rules can go here
 *.log
@@ -174,3 +175,4 @@ data/**/*.csv
 
 # Ignore virtual environment files and executables
 my_new_env/
+
