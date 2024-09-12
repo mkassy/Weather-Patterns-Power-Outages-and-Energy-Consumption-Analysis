@@ -41,10 +41,11 @@ python convert_xml_to_csv.py
 ```
 This script will create a CSV file with the necessary headers for the outage data.
 
-
-# Once the data is downloaded and put into its respective folders, we can clean the data and prepare it for analysis.
+___
 
 # Data Cleaning
+
+Once the data is downloaded and put into its respective folders, we can clean the data and prepare it for analysis.
 
 To perform the data cleaning, run the clean_data.py script:
 
@@ -53,57 +54,67 @@ python clean_data.py
 ```
 This script will:
 
-    1. Clean the Outage Data: Parse and normalize date and time fields, remove leading/trailing whitespaces, standardize categorical data, handle missing values, and drop columns with excessive missing data.
+### 1. Clean the Energy Data:
 
-    2. Process Energy Data: Filter out invalid lines from CSV files in each year-specific directory.
+     - Remove metadata and error lines, and detect the correct header row dynamically for each CSV file.
+    
+    - Handle missing values for both string and numeric columns.
+    
+    - Strip whitespaces from string columns and ensure no critical data is lost.
+    
+    - Save the cleaned data in the cleaned-data/energy/ directory with a consistent folder structure.
 
-The cleaned data will be saved in the specified directories, ready for loading it into the database.
+### 2. Clean the Outage Data:
+
+    - Parse and normalize date fields (Submitted_On, Event_Date) into the YYYY-MM-DD format.
+    
+    - Normalize time fields to 24-hour time format or parse them as 12-hour time where applicable.
+
+    - Remove leading/trailing whitespaces from all string columns.
+
+    - Standardize categorical data (e.g., replacing different variations of No).
+
+    - Handle missing values by filling in defaults or removing incomplete rows.
+    
+    - Drop unnecessary columns with excessive missing values.
+
+### 3. Process Weather Data:
+
+    - Handle missing values for both string and numeric columns.
+
+    - Clean up the dataset by removing unnecessary whitespace and saving the cleaned weather data to a dedicated folder.
+
+
+The cleaned data will be saved in the cleaned-data directory, following the same folder structure as the original data.
+
+___
 
 # Data Loading
 
-1. Start PostgreSQL: Ensure the PostgreSQL service is running. You can also type this into the command line:
+### 1. Start PostgreSQL
+Ensure the PostgreSQL service is running. You can also type this into the command line:
 
 ```bash
 psql -U postgres
 
 ```
 
-2. Create Database: Create a database using either pgAdmin or the command line:
+### 2. Create Database
+Create a database using either pgAdmin or the command line:
 
 ```sql
 CREATE DATABASE mydatabase;
 
 ```
 
-3. Exit psql: Type \q to exit the PostgreSQL command-line interface.
+### 3. Exit PostgreSQL
+Type \q to exit the PostgreSQL command-line interface.
 
-4. Load Data into Database: Use the load_data.py script to load the cleaned data into the PostgreSQL database:
+### 4. Load Data into Database
+Use the load_data.py script to load the cleaned data into the PostgreSQL database:
 
 ```bash
 python load_data.py
 ```
 
 This script load all the cleaned data into the PostgreSQL database, ready for analysis.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
