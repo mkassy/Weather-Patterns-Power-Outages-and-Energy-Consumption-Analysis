@@ -8,7 +8,7 @@ This guide provides instructions for downloading, organizing, cleaning, and load
 
 ### 1. Downloading Data
 
-To download the hourly energy consumption data, use the script download_webfiles.py:
+To download the hourly energy consumption data, use the script `download_webfiles.py`:
 
 ```bash
 python download_webfiles.py
@@ -91,13 +91,59 @@ ___
 
 # Data Loading
 
-### 1. Start PostgreSQL
-Ensure the PostgreSQL service is running. You can also type this into the command line:
+
+### 1. Set the Environment Variables for Database Connection
+Before loading data into the PostgreSQL database, ensure that the necessary environment variables are set for your database connection.
+
+1. Open the .zshrc file in your preferred text editor:
+
+- For Mac/Linux:
+```bash
+nano ~/.zshrc
+```
+
+2. Add the following lines to the file, replacing the values with your own database credentials:
+
+- For Mac/Linux:
 
 ```bash
-psql -U postgres
-
+export DB_NAME='your_database_name'
+export DB_USER='your_username'
+export DB_PASSWORD='your_password'
+export DB_HOST='localhost'
 ```
+
+This will set the required environment variables every time you open a new terminal session.
+
+
+3. Save the file by pressing CTRL + O, then press Enter, and exit by pressing CTRL + X.
+
+4. Apply the changes immediately by running:
+        
+```bash
+source ~/.zshrc
+```
+
+- For Windows:
+
+```bash
+setx DB_NAME 'your_database_name'
+setx DB_USER 'your_username'
+setx DB_PASSWORD 'your_password'
+setx DB_HOST 'localhost'
+```
+For Windows, the environment variables will be set permanently and available in new Command Prompt or PowerShell sessions.
+
+
+5. Confirm the environment variables are set by running:
+            
+```bash
+echo $DB_NAME
+echo $DB_USER
+echo $DB_PASSWORD
+echo $DB_HOST
+```
+
 
 ### 2. Create Database
 Create a database using either pgAdmin or the command line:
@@ -106,15 +152,75 @@ Create a database using either pgAdmin or the command line:
 CREATE DATABASE mydatabase;
 
 ```
+Note: replace mydatabase with the name of your database.
 
-### 3. Exit PostgreSQL
-Type \q to exit the PostgreSQL command-line interface.
 
-### 4. Load Data into Database
-Use the load_data.py script to load the cleaned data into the PostgreSQL database:
+
+### 3. Connect to the Database
+Connect to the PostgreSQL database using the psql command:
 
 ```bash
-python load_data.py
+psql -U postgres -d mydatabase
+```
+Note: replace mydatabase with the name of your database.
+
+
+### 4. Run queries.sql to Create Tables
+
+Run queries.sql to create the necessary tables in the PostgreSQL database:
+
+```bash
+\i queries.sql
+
+```
+Note: replace mydatabase with the name of your database.
+
+Exit the psql shell by typing:
+
+```bash
+\q
 ```
 
-This script load all the cleaned data into the PostgreSQL database, ready for analysis.
+
+### 5. Copy Data into Database
+
+Use the copy_data.py script to load the cleaned data into the PostgreSQL database:
+
+```bash
+python copy_data.py
+```
+
+This script loads all the cleaned data into the PostgreSQL database, ready for analysis.
+
+
+### 6. Verify the Data 
+
+Once the copy_data.py script has completed, you can verify that the data has been successfully loaded into the database by checking the total number of rows in each table:
+
+Connect to the PostgreSQL database using the psql command:
+
+```bash
+psql -U postgres -d mydatabase
+```
+Note: replace mydatabase with the name of your database.
+
+
+Then run the following queries to check the total number of rows in each table:
+
+```sql
+SELECT COUNT(*) FROM staging_energy_data;
+SELECT COUNT(*) FROM staging_outage_data;
+SELECT COUNT(*) FROM staging_weather_data;
+```
+
+Then exit the psql shell by typing:
+
+```bash
+\q
+```
+
+Verify it is the same number when you run count_num_rows.py:
+
+```bash
+python count_num_rows.py
+```
