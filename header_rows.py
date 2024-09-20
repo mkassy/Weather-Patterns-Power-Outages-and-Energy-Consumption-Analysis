@@ -1,15 +1,15 @@
-# print header rows of a csv file
+# print only the header row of a csv file
 
 import csv
 
-# data/energy/FSA_2018/PUB_HourlyConsumptionByFSA_201801_v1.csv
-# file_path = 'data/weather/toronto_2014-2024.csv'
-file_path = 'data/outages/major_response_reporting_data_cleaned.csv'
+# Specify the file path (modify as needed)
+# file_path = 'cleaned-data/energy/FSA_2018_cleaned/PUB_HourlyConsumptionByFSA_201801_v1_cleaned.csv'
+# file_path = 'cleaned-data/outages/major_response_reporting_data_cleaned.csv'
+file_path = 'cleaned-data/weather/toronto_weather_cleaned.csv'
 
-
-# print header rows
-
+# Open and print the header row
 with open(file_path, 'r') as file:
     reader = csv.reader(file)
-    for i in range(5):
-        print(next(reader))
+    # Print only the first row, which is the header
+    header = next(reader)
+    print(header)
