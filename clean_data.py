@@ -83,43 +83,42 @@ def clean_outage_data():
     # Load the CSV file
     outage_df = pd.read_csv(outage_data_path, encoding='utf-8')
 
-    # 1. Parse Date Fields - Ensure dates are in 'YYYY-MM-DD' format
+    # Parse Date Fields
     outage_df['Submitted_On'] = pd.to_datetime(outage_df['Submitted_On'], errors='coerce')
     outage_df['Event_Date'] = pd.to_datetime(outage_df['Event_Date'], errors='coerce')
 
-    # 2. Normalize Time Formats to 24-hour time or parse if 12-hour
-    def normalize_time(time_str):
+    # Normalize Time Format or fill with default '00:00:00'
+    # Clean the time column, strip extra spaces, and convert to 24-hour format
+    def clean_time(time_str):
+        if pd.isna(time_str) or not isinstance(time_str, str):
+            # If it's NaN or not a string, return the default time '00:00:00'
+            return pd.to_datetime('00:00:00').time()
+        
         try:
-            return pd.to_datetime(time_str, format='%I:%M %p').time()  # Parse 12-hour format
-        except:
-            try:
-                return pd.to_datetime(time_str, format='%H:%M').time()  # Parse 24-hour format
-            except:
-                return pd.NaT
+            # Strip extra spaces and convert to a valid time
+            return pd.to_datetime(time_str.strip(), format='%I:%M %p').time()
+        except (ValueError, TypeError):
+            # If the time string is invalid, default to '00:00:00'
+            return pd.to_datetime('00:00:00').time()
 
-    outage_df['Event_Time'] = outage_df['Event_Time'].apply(normalize_time)
+    outage_df['Event_Time'] = outage_df['Event_Time'].apply(clean_time)
 
-    # 3. Remove Leading/Trailing Whitespaces from all object columns
-    for col in outage_df.select_dtypes(include=['object']).columns:
-        outage_df[col] = outage_df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+    # Fill missing values in string columns
+    str_cols = outage_df.select_dtypes(include=['object']).columns
+    outage_df[str_cols] = outage_df[str_cols].fillna('')
 
-    # 4. Normalize Categorical Data
-    outage_df['Prior_Distributor_Warning'] = outage_df['Prior_Distributor_Warning'].replace({'No.': 'No', 'no': 'No'})
-    outage_df['Need_Equipment_or_Materials'] = outage_df['Need_Equipment_or_Materials'].replace({'No.': 'No', 'no': 'No'})
+    # Normalize specific columns (like 'No_Arrangements_Extra_Employees')
+    outage_df['No_Arrangements_Extra_Employees'] = outage_df['No_Arrangements_Extra_Employees'].replace({
+        'n/a': '', 'Not Applicable (N/A)': '', 'N/A': ''
+    }).fillna('')
 
-    # 5. Handle Missing Times
-    outage_df['Event_Time'] = outage_df['Event_Time'].fillna(pd.Timestamp('00:00:00').time())
+    # Fill missing numeric values with 0
+    num_cols = outage_df.select_dtypes(include=['float64', 'int64']).columns
+    outage_df[num_cols] = outage_df[num_cols].fillna(0)
 
-    # 6. Remove Incomplete Rows (Optional: Depends on your use case)
-    outage_df.dropna(subset=['Submitted_On', 'Event_Date'], inplace=True)
-
-    # 7. Drop Columns with Too Many Missing Values
-    columns_to_drop = ['Hours_to_Restore_Ninety_Percent_Comments', 'Third_Party_Assistance_Details']
+    # Drop Columns with too many missing values if needed
+    columns_to_drop = ['Third_Party_Assistance_Details', 'Hours_to_Restore_Ninety_Percent_Comments']
     outage_df.drop(columns=columns_to_drop, inplace=True)
-
-    # 8. Convert Date Columns Back to 'YYYY-MM-DD' Format
-    outage_df['Submitted_On'] = outage_df['Submitted_On'].dt.strftime('%Y-%m-%d')
-    outage_df['Event_Date'] = outage_df['Event_Date'].dt.strftime('%Y-%m-%d')
 
     # Save the cleaned data
     cleaned_outage_path = os.path.join(cleaned_outage_dir, 'major_response_reporting_data_cleaned.csv')
@@ -157,9 +156,9 @@ def main():
     create_cleaned_data_directory()
     
     # Clean each dataset
-    clean_energy_data()
+    # clean_energy_data()
     clean_outage_data()
-    clean_weather_data()
+    # clean_weather_data()
 
 if __name__ == "__main__":
     main()
