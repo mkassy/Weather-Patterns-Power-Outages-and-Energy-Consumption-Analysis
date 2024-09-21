@@ -79,9 +79,9 @@ def main():
         print("Database connection successful")
 
         # Load energy data, outage data, and weather data
-        # load_energy_data(conn)
+        load_energy_data(conn)
         load_outage_data(conn)
-        # load_weather_data(conn)
+        load_weather_data(conn)
 
         # Close the connection
         conn.close()
