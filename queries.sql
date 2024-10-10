@@ -1,7 +1,3 @@
-DROP TABLE IF EXISTS staging_energy_data;
-DROP TABLE IF EXISTS staging_outage_data;
-DROP TABLE IF EXISTS staging_weather_data;
-
 -- Create staging tables
 CREATE TABLE IF NOT EXISTS staging_energy_data (
     fsa VARCHAR(10),
@@ -59,3 +55,101 @@ CREATE TABLE IF NOT EXISTS staging_weather_data (
     tmin NUMERIC,
     tmin_attributes TEXT
 );
+
+
+-- Create daily energy data table if it doesn't exist
+CREATE TABLE IF NOT EXISTS toronto_energy_data AS
+SELECT 
+    fsa,
+    date,
+    price_plan,  
+    SUM(total_consumption) AS daily_total_consumption,
+    SUM(premise_count) AS total_premises
+FROM 
+    staging_energy_data
+WHERE 
+    fsa LIKE 'M%'  -- Filter for Toronto FSAs (those starting with 'M')
+GROUP BY 
+    fsa, date, price_plan 
+ORDER BY 
+    date;
+
+
+-- Create toronto outage data table if it doesn't exist
+-- Create toronto outage data table with relevant fields for analysis
+CREATE TABLE IF NOT EXISTS toronto_outage_data AS
+SELECT 
+    "Company_Name", 
+    "Year", 
+    "Submitted_On", 
+    "Event_Date", 
+    "Event_Time", 
+    "Prior_Distributor_Warning", 
+    "Main_Contributing_Event", 
+    "Brief_Description", 
+    "ETR_Issued", 
+    "ETR_Issued_Details", 
+    "Number_of_Customers_Interrupted", 
+    "Percentage_Customers_Interrupted", 
+    "Hours_to_Restore_Ninety_Percent", 
+    "Outages_Loss_of_Supply"
+FROM staging_outage_data
+WHERE 
+    "Company_Name" ILIKE '%Toronto%' 
+    OR "Company_Name" ILIKE '%GTA%'
+    OR "Brief_Description" ILIKE '%Toronto%'
+    OR "Brief_Description" ILIKE '%GTA%'
+    OR "Prior_Distributor_Warning_Details" ILIKE '%Toronto%'
+    OR "Prior_Distributor_Warning_Details" ILIKE '%GTA%'
+    OR "ETR_Issued_Details" ILIKE '%Toronto%'
+    OR "ETR_Issued_Details" ILIKE '%GTA%'
+    OR "No_Arrangements_Extra_Employees" ILIKE '%Toronto%'
+    OR "No_Arrangements_Extra_Employees" ILIKE '%GTA%'
+    OR "Third_Party_Assistance" ILIKE '%Toronto%'
+    OR "Third_Party_Assistance" ILIKE '%GTA%';
+
+
+-- Create toronto weather data table if it doesn't exist
+CREATE TABLE IF NOT EXISTS toronto_weather_data AS
+SELECT 
+    station, 
+    date, 
+    prcp AS precipitation_mm, 
+    snwd AS snow_depth_mm, 
+    tavg AS avg_temperature_celsius, 
+    tmax AS max_temperature_celsius, 
+    tmin AS min_temperature_celsius
+FROM staging_weather_data
+WHERE name ILIKE '%Toronto%';
+
+
+-- Create a combined table with energy, weather, and outage data
+-- Create a table with combined date and event date into one column
+CREATE TABLE IF NOT EXISTS combined_outage_days AS
+SELECT 
+    COALESCE(to_data."Event_Date", te.date) AS date,  -- Combine the two date columns
+    te.fsa, 
+    te.price_plan, 
+    te.daily_total_consumption, 
+    te.total_premises,
+    tw.precipitation_mm, 
+    tw.snow_depth_mm, 
+    tw.avg_temperature_celsius, 
+    tw.max_temperature_celsius, 
+    tw.min_temperature_celsius,
+    to_data."Company_Name", 
+    to_data."Number_of_Customers_Interrupted", 
+    to_data."Percentage_Customers_Interrupted", 
+    to_data."Hours_to_Restore_Ninety_Percent"
+FROM 
+    toronto_energy_data te
+JOIN 
+    toronto_weather_data tw
+ON 
+    te.date = tw.date
+LEFT JOIN 
+    toronto_outage_data to_data
+ON 
+    te.date = to_data."Event_Date"
+WHERE 
+    to_data."Event_Date" IS NOT NULL;
