@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS staging_outage_data (
     "IEEE_Standard_Used" TEXT,
     "ETR_Issued" TEXT,
     "ETR_Issued_Details" TEXT,
-    "Number_of_Customers_Interrupted" FLOAT,
+    "Number_of_Customers_Interrupted" INTEGER,
     "Percentage_Customers_Interrupted" NUMERIC,
     "Hours_to_Restore_Ninety_Percent" NUMERIC,
     "Hours_to_Restore_Ninety_Percent_Comments" TEXT,
@@ -123,9 +123,8 @@ FROM staging_weather_data
 WHERE name ILIKE '%Toronto%';
 
 
--- Create a combined table with energy, weather, and outage data
--- Create a table with combined date and event date into one column
-CREATE TABLE IF NOT EXISTS combined_outage_days AS
+-- Create a combined table with energy, weather, and outage data (including non-outage days)
+CREATE TABLE IF NOT EXISTS toronto_weather_energy_outages_data AS
 SELECT 
     COALESCE(to_data."Event_Date", te.date) AS date,  -- Combine the two date columns
     te.fsa, 
@@ -137,10 +136,10 @@ SELECT
     tw.avg_temperature_celsius, 
     tw.max_temperature_celsius, 
     tw.min_temperature_celsius,
-    to_data."Company_Name", 
-    to_data."Number_of_Customers_Interrupted", 
-    to_data."Percentage_Customers_Interrupted", 
-    to_data."Hours_to_Restore_Ninety_Percent"
+    to_data."Company_Name",  -- Will be NULL on non-outage days
+    to_data."Number_of_Customers_Interrupted",  -- Will be NULL on non-outage days
+    to_data."Percentage_Customers_Interrupted",  -- Will be NULL on non-outage days
+    to_data."Hours_to_Restore_Ninety_Percent"  -- Will be NULL on non-outage days
 FROM 
     toronto_energy_data te
 JOIN 
@@ -150,6 +149,4 @@ ON
 LEFT JOIN 
     toronto_outage_data to_data
 ON 
-    te.date = to_data."Event_Date"
-WHERE 
-    to_data."Event_Date" IS NOT NULL;
+    te.date = to_data."Event_Date";  -- Keep all rows from energy and weather data, include outages where they exist
