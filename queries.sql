@@ -62,15 +62,16 @@ CREATE TABLE IF NOT EXISTS toronto_energy_data AS
 SELECT 
     fsa,
     date,
-    price_plan,  
-    SUM(total_consumption) AS daily_total_consumption,
+    price_plan,
+    customer_type,
+    SUM(total_consumption) AS daily_total_consumption_kWh,
     SUM(premise_count) AS total_premises
 FROM 
     staging_energy_data
 WHERE 
     fsa LIKE 'M%'  -- Filter for Toronto FSAs (those starting with 'M')
 GROUP BY 
-    fsa, date, price_plan 
+    fsa, date, price_plan, customer_type 
 ORDER BY 
     date;
 
@@ -112,7 +113,9 @@ WHERE
 -- Create toronto weather data table if it doesn't exist
 CREATE TABLE IF NOT EXISTS toronto_weather_data AS
 SELECT 
-    station, 
+    station,
+    latitude,
+    longitude,
     date, 
     prcp AS precipitation_mm, 
     snwd AS snow_depth_mm, 
@@ -128,9 +131,12 @@ CREATE TABLE IF NOT EXISTS toronto_weather_energy_outages_data AS
 SELECT 
     COALESCE(to_data."Event_Date", te.date) AS date,  -- Combine the two date columns
     te.fsa, 
+    te.customer_type,
     te.price_plan, 
-    te.daily_total_consumption, 
+    te.daily_total_consumption_kWh, 
     te.total_premises,
+    tw.latitude,
+    tw.longitude,
     tw.precipitation_mm, 
     tw.snow_depth_mm, 
     tw.avg_temperature_celsius, 
