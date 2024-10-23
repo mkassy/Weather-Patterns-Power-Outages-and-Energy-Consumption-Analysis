@@ -23,6 +23,12 @@ outage_headers = [
     '"Third_Party_Assistance"'
 ]
 
+hourly_outage_data_headers = [
+    'UtilityName', 'StateName', 'CountyName', 'CityName', 
+    'CustomersTracked', 'CustomersOut', 'RecordDateTime'
+]
+
+
 weather_headers = [
     'station', 'name', 'latitude', 'longitude', 'elevation', 'date', 'prcp', 'prcp_attributes', 
     'snwd', 'snwd_attributes', 'tavg', 'tavg_attributes', 'tmax', 'tmax_attributes', 'tmin', 
@@ -30,12 +36,26 @@ weather_headers = [
 ]
 
 # Function to copy CSV data to the PostgreSQL table with explicit headers
-def copy_csv_to_table(conn, file_path, table_name, headers):
+# def copy_csv_to_table(conn, file_path, table_name, headers):
+#     cursor = conn.cursor()
+#     try:
+#         # Convert headers list to a string of comma-separated column names
+#         columns = ', '.join(headers)
+#         with open(file_path, 'r') as f:
+#             copy_query = f"COPY {table_name} ({columns}) FROM STDIN WITH CSV HEADER NULL AS ''"
+#             cursor.copy_expert(copy_query, f)
+#         print(f"Data from {file_path} loaded into {table_name} successfully.")
+#     except Exception as e:
+#         print(f"Error loading {file_path} into {table_name}: {str(e)}")
+#     finally:
+#         cursor.close()
+
+def copy_csv_to_table(conn, file_path, table_name, headers, encoding='UTF-16'):
     cursor = conn.cursor()
     try:
         # Convert headers list to a string of comma-separated column names
         columns = ', '.join(headers)
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding=encoding) as f:
             copy_query = f"COPY {table_name} ({columns}) FROM STDIN WITH CSV HEADER NULL AS ''"
             cursor.copy_expert(copy_query, f)
         print(f"Data from {file_path} loaded into {table_name} successfully.")
@@ -62,6 +82,13 @@ def load_outage_data(conn):
     copy_csv_to_table(conn, outage_file, 'staging_outage_data', outage_headers)
     conn.commit()
 
+# Load hourly outage data 
+def load_hourly_outage_data(conn):
+    hourly_outage_data_file = 'data/outages/POUS_Export_City_Hourly_Toronto.csv'
+    print(f"Loading {hourly_outage_data_file} into staging_hourly_outage_data")
+    copy_csv_to_table(conn, hourly_outage_data_file, 'staging_hourly_outage_data', hourly_outage_data_headers, encoding='UTF-16')
+    conn.commit()
+
 # Load weather data
 def load_weather_data(conn):
     weather_file = 'cleaned-data/weather/toronto_weather_cleaned.csv'
@@ -79,9 +106,10 @@ def main():
         print("Database connection successful")
 
         # Load energy data, outage data, and weather data
-        load_energy_data(conn)
-        load_outage_data(conn)
-        load_weather_data(conn)
+        # load_energy_data(conn)
+        # load_outage_data(conn)
+        load_hourly_outage_data(conn)
+        # load_weather_data(conn)
 
         # Close the connection
         conn.close()
