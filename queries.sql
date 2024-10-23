@@ -58,13 +58,13 @@ CREATE TABLE IF NOT EXISTS staging_weather_data (
 
 
 CREATE TABLE IF NOT EXISTS staging_hourly_outage_data (
-    UtilityName VARCHAR(100),
-    StateName VARCHAR(50),
-    CountyName VARCHAR(100),
-    CityName VARCHAR(100),
-    CustomersTracked INTEGER,
-    CustomersOut INTEGER,
-    RecordDateTime TIMESTAMP
+    "UtilityName" VARCHAR(100),
+    "StateName" VARCHAR(50),
+    "CountyName" VARCHAR(100),
+    "CityName" VARCHAR(100),
+    "CustomersTracked" INTEGER,
+    "CustomersOut" INTEGER,
+    "RecordDateTime" TIMESTAMP
 );
 
 
@@ -87,11 +87,11 @@ ORDER BY
     date;
 
 
--- Create toronto outage data table if it doesn't exist
--- Create toronto outage data table with relevant fields for analysis
+-- Create toronto_outage_data table by combining data from staging_outage_data and aggregated staging_hourly_outage_data
 CREATE TABLE IF NOT EXISTS toronto_outage_data AS
+-- Manually reported outages from staging_outage_data
 SELECT 
-    "Company_Name", 
+    "Company_Name" AS "Company_Name",  -- Explicitly select "Company_Name" for clarity
     "Year", 
     "Submitted_On", 
     "Event_Date", 
@@ -105,7 +105,8 @@ SELECT
     "Percentage_Customers_Interrupted", 
     "Hours_to_Restore_Ninety_Percent", 
     "Outages_Loss_of_Supply"
-FROM staging_outage_data
+FROM 
+    staging_outage_data
 WHERE 
     "Company_Name" ILIKE '%Toronto%' 
     OR "Company_Name" ILIKE '%GTA%'
@@ -118,7 +119,32 @@ WHERE
     OR "No_Arrangements_Extra_Employees" ILIKE '%Toronto%'
     OR "No_Arrangements_Extra_Employees" ILIKE '%GTA%'
     OR "Third_Party_Assistance" ILIKE '%Toronto%'
-    OR "Third_Party_Assistance" ILIKE '%GTA%';
+    OR "Third_Party_Assistance" ILIKE '%GTA%'
+
+UNION ALL
+
+-- Aggregated hourly outages from staging_hourly_outage_data
+SELECT 
+    "UtilityName" AS "Company_Name",  -- Map "UtilityName" from hourly data to "Company_Name"
+    EXTRACT(YEAR FROM "RecordDateTime") AS "Year", 
+    NULL AS "Submitted_On", 
+    DATE("RecordDateTime") AS "Event_Date", 
+    NULL AS "Event_Time", 
+    NULL AS "Prior_Distributor_Warning", 
+    NULL AS "Main_Contributing_Event", 
+    NULL AS "Brief_Description", 
+    NULL AS "ETR_Issued", 
+    NULL AS "ETR_Issued_Details", 
+    SUM("CustomersOut") AS "Number_of_Customers_Interrupted", 
+    NULL AS "Percentage_Customers_Interrupted", 
+    NULL AS "Hours_to_Restore_Ninety_Percent", 
+    NULL AS "Outages_Loss_of_Supply"
+FROM 
+    staging_hourly_outage_data
+GROUP BY 
+    "UtilityName", EXTRACT(YEAR FROM "RecordDateTime"), DATE("RecordDateTime")
+ORDER BY 
+    "Event_Date";
 
 
 -- Create toronto weather data table if it doesn't exist
@@ -153,10 +179,10 @@ SELECT
     tw.avg_temperature_celsius, 
     tw.max_temperature_celsius, 
     tw.min_temperature_celsius,
-    to_data."Company_Name",  -- Will be NULL on non-outage days
-    to_data."Number_of_Customers_Interrupted",  -- Will be NULL on non-outage days
-    to_data."Percentage_Customers_Interrupted",  -- Will be NULL on non-outage days
-    to_data."Hours_to_Restore_Ninety_Percent"  -- Will be NULL on non-outage days
+    COALESCE(to_data."Company_Name", 'No Outage') AS "Company_Name",  -- Fallback for non-outage days
+    COALESCE(to_data."Number_of_Customers_Interrupted", 0) AS "Number_of_Customers_Interrupted",  -- Default to 0 if no outage
+    COALESCE(to_data."Percentage_Customers_Interrupted", 0) AS "Percentage_Customers_Interrupted",  -- Default to 0
+    COALESCE(to_data."Hours_to_Restore_Ninety_Percent", 0) AS "Hours_to_Restore_Ninety_Percent"  -- Default to 0
 FROM 
     toronto_energy_data te
 JOIN 
@@ -166,4 +192,6 @@ ON
 LEFT JOIN 
     toronto_outage_data to_data
 ON 
-    te.date = to_data."Event_Date";  -- Keep all rows from energy and weather data, include outages where they exist
+    te.date = to_data."Event_Date"  -- Keep all rows from energy and weather data, include outages where they exist
+ORDER BY 
+    te.date;

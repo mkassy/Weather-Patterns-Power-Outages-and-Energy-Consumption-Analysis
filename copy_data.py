@@ -24,8 +24,8 @@ outage_headers = [
 ]
 
 hourly_outage_data_headers = [
-    'UtilityName', 'StateName', 'CountyName', 'CityName', 
-    'CustomersTracked', 'CustomersOut', 'RecordDateTime'
+    '"UtilityName"', '"StateName"', '"CountyName"', '"CityName"', 
+    '"CustomersTracked"', '"CustomersOut"', '"RecordDateTime"'
 ]
 
 
