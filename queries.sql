@@ -57,6 +57,17 @@ CREATE TABLE IF NOT EXISTS staging_weather_data (
 );
 
 
+CREATE TABLE IF NOT EXISTS staging_hourly_outage_data (
+    UtilityName VARCHAR(100),
+    StateName VARCHAR(50),
+    CountyName VARCHAR(100),
+    CityName VARCHAR(100),
+    CustomersTracked INTEGER,
+    CustomersOut INTEGER,
+    RecordDateTime TIMESTAMP
+);
+
+
 -- Create daily energy data table if it doesn't exist
 CREATE TABLE IF NOT EXISTS toronto_energy_data AS
 SELECT 
