@@ -37,6 +37,16 @@ CREATE TABLE IF NOT EXISTS staging_outage_data (
     "Third_Party_Assistance" TEXT
 );
 
+CREATE TABLE IF NOT EXISTS staging_hourly_outage_data (
+    "UtilityName" VARCHAR(100),
+    "StateName" VARCHAR(50),
+    "CountyName" VARCHAR(100),
+    "CityName" VARCHAR(100),
+    "CustomersTracked" INTEGER,
+    "CustomersOut" INTEGER,
+    "RecordDateTime" TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS staging_weather_data (
     station VARCHAR(20),
     name TEXT,
@@ -57,14 +67,37 @@ CREATE TABLE IF NOT EXISTS staging_weather_data (
 );
 
 
-CREATE TABLE IF NOT EXISTS staging_hourly_outage_data (
-    "UtilityName" VARCHAR(100),
-    "StateName" VARCHAR(50),
-    "CountyName" VARCHAR(100),
-    "CityName" VARCHAR(100),
-    "CustomersTracked" INTEGER,
-    "CustomersOut" INTEGER,
-    "RecordDateTime" TIMESTAMP
+CREATE TABLE IF NOT EXISTS staging_hourly_weather_data (
+    longitude_x FLOAT,  
+    latitude_y FLOAT,  
+    station_name TEXT,  
+    climate_id BIGINT,  
+    date_time_lst TIMESTAMP,  
+    year INT,  
+    month INT,  
+    day INT,  
+    time_lst TEXT,  
+    temp_c FLOAT,  
+    temp_flag TEXT,  
+    dew_point_temp_c FLOAT,  
+    dew_point_temp_flag TEXT,  
+    rel_hum_percent FLOAT,  -- Change to FLOAT to handle values like 79.0
+    rel_hum_flag TEXT,  
+    precip_amount_mm FLOAT,  
+    precip_amount_flag TEXT,  
+    wind_dir_10s_deg FLOAT,  
+    wind_dir_flag TEXT,  
+    wind_spd_kmh FLOAT,  
+    wind_spd_flag TEXT,  
+    visibility_km FLOAT,  
+    visibility_flag TEXT,  
+    stn_press_kpa FLOAT,  
+    stn_press_flag TEXT,  
+    hmdx FLOAT,  
+    hmdx_flag TEXT,  
+    wind_chill FLOAT,  
+    wind_chill_flag TEXT,  
+    weather TEXT  
 );
 
 
@@ -161,6 +194,9 @@ SELECT
     tmin AS min_temperature_celsius
 FROM staging_weather_data
 WHERE name ILIKE '%Toronto%';
+
+
+
 
 
 -- Create a combined table with energy, weather, and outage data (including non-outage days)
