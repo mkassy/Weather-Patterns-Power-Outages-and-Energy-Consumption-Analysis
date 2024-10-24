@@ -151,14 +151,50 @@ def clean_weather_data():
     weather_df.to_csv(cleaned_weather_path, index=False)
     print(f"Weather data cleaned and saved to {cleaned_weather_path}")
 
+def clean_hourly_weather_data():
+    # Define paths
+    weather_base_dir = 'data/weather/toronto_hourly_weather'
+    cleaned_weather_dir = 'cleaned-data/weather/toronto_hourly_weather_cleaned'
+    
+    # Create directory for cleaned weather data if it doesn't exist
+    if not os.path.exists(cleaned_weather_dir):
+        os.makedirs(cleaned_weather_dir)
+    
+    # Loop through all files in the hourly weather directory
+    for filename in os.listdir(weather_base_dir):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(weather_base_dir, filename)
+            try:
+                # Load the weather data CSV file
+                weather_df = pd.read_csv(file_path)
+                
+                # Fill missing values
+                str_cols = weather_df.select_dtypes(include=['object']).columns
+                num_cols = weather_df.select_dtypes(include=['float64', 'int64']).columns
+
+                weather_df[str_cols] = weather_df[str_cols].fillna('')  # Fill string columns with empty string
+                weather_df[num_cols] = weather_df[num_cols].fillna(0)   # Fill numeric columns with 0
+                
+                # Convert the 'Date/Time (LST)' column to datetime
+                weather_df['Date/Time (LST)'] = pd.to_datetime(weather_df['Date/Time (LST)'], errors='coerce')
+                
+                # Save cleaned data
+                cleaned_file_path = os.path.join(cleaned_weather_dir, filename.replace('.csv', '_cleaned.csv'))
+                weather_df.to_csv(cleaned_file_path, index=False)
+                print(f"Cleaned hourly weather data saved to {cleaned_file_path}")
+            except Exception as e:
+                print(f"Error processing file {file_path}: {e}")
+
+
 def main():
     # Create the cleaned-data directory structure
     create_cleaned_data_directory()
     
     # Clean each dataset
     # clean_energy_data()
-    clean_outage_data()
+    # clean_outage_data()
     # clean_weather_data()
+    clean_hourly_weather_data()
 
 if __name__ == "__main__":
     main()
