@@ -21,7 +21,12 @@ driver = webdriver.Firefox(service=firefox_service, options=firefox_options)
 def download_weather_data(year, month):
     try:
         # Open the URL for hourly weather data for the station
-        driver.get('https://climate.weather.gc.ca/climate_data/hourly_data_e.html?StationID=31688&Prov=ON')
+        # For Toroto City Station:
+        # driver.get('https://climate.weather.gc.ca/climate_data/hourly_data_e.html?StationID=31688&Prov=ON')
+
+        # For Toronto International Airport:
+        driver.get('https://climate.weather.gc.ca/climate_data/hourly_data_e.html?StationID=51459&Prov=ON')
+
 
         # Select the year from the dropdown menu (assuming it's in a dropdown with name "Year1")
         WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.ID, "Year1")))
