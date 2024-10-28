@@ -100,6 +100,39 @@ CREATE TABLE IF NOT EXISTS staging_hourly_weather_data (
     weather TEXT  
 );
 
+CREATE TABLE IF NOT EXISTS staging_hourly_weather_data_with_wind (
+    longitude_x FLOAT,  
+    latitude_y FLOAT,  
+    station_name TEXT,  
+    climate_id BIGINT,  
+    date_time_lst TIMESTAMP,  
+    year INT,  
+    month INT,  
+    day INT,  
+    time_lst TEXT,  
+    temp_c FLOAT,  
+    temp_flag TEXT,  
+    dew_point_temp_c FLOAT,  
+    dew_point_temp_flag TEXT,  
+    rel_hum_percent FLOAT,  -- Change to FLOAT to handle values like 79.0
+    rel_hum_flag TEXT,  
+    precip_amount_mm FLOAT,  
+    precip_amount_flag TEXT,  
+    wind_dir_10s_deg FLOAT,  
+    wind_dir_flag TEXT,  
+    wind_spd_kmh FLOAT,  
+    wind_spd_flag TEXT,  
+    visibility_km FLOAT,  
+    visibility_flag TEXT,  
+    stn_press_kpa FLOAT,  
+    stn_press_flag TEXT,  
+    hmdx FLOAT,  
+    hmdx_flag TEXT,  
+    wind_chill FLOAT,  
+    wind_chill_flag TEXT,  
+    weather TEXT  
+);
+
 
 -- Create daily energy data table if it doesn't exist
 CREATE TABLE IF NOT EXISTS toronto_energy_data AS
@@ -200,34 +233,128 @@ WHERE name ILIKE '%Toronto%';
 
 
 -- Create a combined table with energy, weather, and outage data (including non-outage days)
-CREATE TABLE IF NOT EXISTS toronto_weather_energy_outages_data AS
+-- CREATE TABLE IF NOT EXISTS toronto_weather_energy_outages_data AS
+-- SELECT 
+--     COALESCE(to_data."Event_Date", te.date) AS date,  -- Combine the two date columns
+--     te.fsa, 
+--     te.customer_type,
+--     te.price_plan, 
+--     te.daily_total_consumption_kWh, 
+--     te.total_premises,
+--     tw.latitude,
+--     tw.longitude,
+--     tw.precipitation_mm, 
+--     tw.snow_depth_mm, 
+--     tw.avg_temperature_celsius, 
+--     tw.max_temperature_celsius, 
+--     tw.min_temperature_celsius,
+--     COALESCE(to_data."Company_Name", 'No Outage') AS "Company_Name",  -- Fallback for non-outage days
+--     COALESCE(to_data."Number_of_Customers_Interrupted", 0) AS "Number_of_Customers_Interrupted",  -- Default to 0 if no outage
+--     COALESCE(to_data."Percentage_Customers_Interrupted", 0) AS "Percentage_Customers_Interrupted",  -- Default to 0
+--     COALESCE(to_data."Hours_to_Restore_Ninety_Percent", 0) AS "Hours_to_Restore_Ninety_Percent"  -- Default to 0
+-- FROM 
+--     toronto_energy_data te
+-- JOIN 
+--     toronto_weather_data tw
+-- ON 
+--     te.date = tw.date
+-- LEFT JOIN 
+--     toronto_outage_data to_data
+-- ON 
+--     te.date = to_data."Event_Date"  -- Keep all rows from energy and weather data, include outages where they exist
+-- ORDER BY 
+--     te.date;
+
+
+
+-- MASTER TABLE with HOURLY data for TORONTO
+
+-- Create toronto_hourly_weather_energy_outages_data with hourly data at the city level
+-- CREATE TABLE IF NOT EXISTS toronto_hourly_weather_energy_outages_data AS
+-- SELECT 
+--     COALESCE(sho."RecordDateTime", she.date + she.hour * INTERVAL '1 hour') AS date_hour,  -- Combine dates to retain hourly data
+--     she.customer_type,
+--     she.price_plan,
+--     SUM(she.total_consumption) AS hourly_total_consumption_kWh, 
+--     SUM(she.premise_count) AS total_premises,
+--     shw.latitude_y AS latitude,
+--     shw.longitude_x AS longitude,
+--     AVG(shw.temp_c) AS avg_temperature_celsius,
+--     AVG(shw.dew_point_temp_c) AS avg_dew_point_celsius,
+--     AVG(shw.rel_hum_percent) AS avg_relative_humidity_percent,
+--     SUM(shw.precip_amount_mm) AS hourly_precipitation_mm,
+--     AVG(shw.wind_spd_kmh) AS avg_wind_speed_kmh,
+--     AVG(shw.stn_press_kpa) AS avg_station_pressure_kpa,
+--     COALESCE(sho."UtilityName", 'No Outage') AS "UtilityName",
+--     COALESCE(SUM(sho."CustomersOut"), 0) AS "CustomersOut"  -- Total number of customers affected by outages hourly
+-- FROM 
+--     staging_energy_data she
+-- JOIN 
+--     staging_hourly_weather_data shw 
+-- ON 
+--     she.date = DATE(shw.date_time_lst) AND she.hour = EXTRACT(HOUR FROM shw.date_time_lst)  -- Matching by date and hour
+-- LEFT JOIN 
+--     staging_hourly_outage_data sho 
+-- ON 
+--     she.date = DATE(sho."RecordDateTime") AND she.hour = EXTRACT(HOUR FROM sho."RecordDateTime")  -- Matching outages by date and hour
+-- WHERE 
+--     she.fsa LIKE 'M%'  -- Only Toronto FSAs
+-- GROUP BY 
+--     date_hour, she.customer_type, she.price_plan, shw.latitude_y, shw.longitude_x, sho."UtilityName"
+-- ORDER BY 
+--     date_hour;
+
+
+CREATE TABLE IF NOT EXISTS merged_hourly_weather_data AS
 SELECT 
-    COALESCE(to_data."Event_Date", te.date) AS date,  -- Combine the two date columns
-    te.fsa, 
-    te.customer_type,
-    te.price_plan, 
-    te.daily_total_consumption_kWh, 
-    te.total_premises,
-    tw.latitude,
-    tw.longitude,
-    tw.precipitation_mm, 
-    tw.snow_depth_mm, 
-    tw.avg_temperature_celsius, 
-    tw.max_temperature_celsius, 
-    tw.min_temperature_celsius,
-    COALESCE(to_data."Company_Name", 'No Outage') AS "Company_Name",  -- Fallback for non-outage days
-    COALESCE(to_data."Number_of_Customers_Interrupted", 0) AS "Number_of_Customers_Interrupted",  -- Default to 0 if no outage
-    COALESCE(to_data."Percentage_Customers_Interrupted", 0) AS "Percentage_Customers_Interrupted",  -- Default to 0
-    COALESCE(to_data."Hours_to_Restore_Ninety_Percent", 0) AS "Hours_to_Restore_Ninety_Percent"  -- Default to 0
+    -- Date and time for hourly data
+    COALESCE(shwd.date_time_lst, shww.date_time_lst) AS date_time_lst,  -- Use COALESCE to merge date_time
+    
+    -- Location and station identifiers
+    shwd.latitude_y AS latitude_city,
+    shwd.longitude_x AS longitude_city,
+    shww.latitude_y AS latitude_intl,
+    shww.longitude_x AS longitude_intl,
+    shwd.station_name AS station_name_city,
+    shww.station_name AS station_name_intl,
+    shwd.climate_id AS climate_id_city,
+    shww.climate_id AS climate_id_intl,
+
+    -- Temperature columns: Separate for each dataset, plus an average
+    shwd.temp_c AS temp_c_city,  -- Temperature from City dataset
+    shww.temp_c AS temp_c_intl,  -- Temperature from Toronto Intl A dataset
+    CASE 
+        WHEN shwd.temp_c IS NOT NULL AND shww.temp_c IS NOT NULL 
+            THEN (shwd.temp_c + shww.temp_c) / 2  -- Average if both values are present
+        ELSE COALESCE(shwd.temp_c, shww.temp_c)  -- Use whichever is available
+    END AS avg_temp_celsius,
+    
+    -- Dew point and relative humidity: Average or keep both
+    CASE 
+        WHEN shwd.dew_point_temp_c IS NOT NULL AND shww.dew_point_temp_c IS NOT NULL 
+            THEN (shwd.dew_point_temp_c + shww.dew_point_temp_c) / 2
+        ELSE COALESCE(shwd.dew_point_temp_c, shww.dew_point_temp_c)
+    END AS avg_dew_point_celsius,
+    shwd.rel_hum_percent AS rel_hum_percent_city,
+    shww.rel_hum_percent AS rel_hum_percent_intl,
+    
+    -- Wind data: Only from Toronto Intl A
+    shww.wind_dir_10s_deg AS wind_dir_10s_deg,
+    shww.wind_spd_kmh AS wind_spd_kmh,
+    
+    -- Additional fields
+    shww.visibility_km AS visibility_km,  -- Visibility only from Toronto Intl A
+    shwd.precip_amount_mm AS precip_amount_mm,  -- Precipitation only from Toronto City
+    COALESCE(shwd.stn_press_kpa, shww.stn_press_kpa) AS avg_station_pressure_kpa,
+    COALESCE(shwd.hmdx, shww.hmdx) AS hmdx,
+    COALESCE(shwd.wind_chill, shww.wind_chill) AS wind_chill,
+    
+    -- Weather description: Use only from Toronto Intl A dataset
+    shww.weather AS weather  -- Use weather data only from Toronto Intl A
+
 FROM 
-    toronto_energy_data te
-JOIN 
-    toronto_weather_data tw
+    staging_hourly_weather_data shwd
+FULL OUTER JOIN 
+    staging_hourly_weather_data_with_wind shww
 ON 
-    te.date = tw.date
-LEFT JOIN 
-    toronto_outage_data to_data
-ON 
-    te.date = to_data."Event_Date"  -- Keep all rows from energy and weather data, include outages where they exist
-ORDER BY 
-    te.date;
+    shwd.date_time_lst = shww.date_time_lst;  -- Join on timestamp for hourly data alignment

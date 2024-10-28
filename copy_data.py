@@ -107,6 +107,17 @@ def load_hourly_weather_data(conn):
                 copy_csv_to_table(conn, file_path, 'staging_hourly_weather_data', hourly_weather_data_headers, encoding='UTF-8-SIG')
     conn.commit()
 
+# Load hourly weather data with wind from all CSV files in the directory
+def load_hourly_weather_data_with_wind(conn):
+    weather_dir = 'cleaned-data/weather/toronto_hourly_weather_with_wind_cleaned'
+    for root, _, files in os.walk(weather_dir):
+        for file in files:
+            if file.endswith('.csv'):
+                file_path = os.path.join(root, file)
+                print(f"Loading {file_path} into staging_hourly_weather_data_with_wind")
+                # Use 'UTF-8-SIG' for the weather data
+                copy_csv_to_table(conn, file_path, 'staging_hourly_weather_data_with_wind', hourly_weather_data_headers, encoding='UTF-8-SIG')
+    conn.commit()
 
 # Main function to establish connection and load data
 def main():
@@ -122,7 +133,8 @@ def main():
         # load_outage_data(conn)
         # load_hourly_outage_data(conn)
         # load_weather_data(conn)
-        load_hourly_weather_data(conn)
+        # load_hourly_weather_data(conn)
+        load_hourly_weather_data_with_wind(conn)
 
         # Close the connection
         conn.close()
