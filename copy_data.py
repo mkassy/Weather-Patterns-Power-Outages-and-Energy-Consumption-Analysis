@@ -67,15 +67,15 @@ def load_energy_data(conn):
         for file in files:
             if file.endswith('.csv'):
                 file_path = os.path.join(root, file)
-                print(f"Loading {file_path} into staging_energy_data")
-                copy_csv_to_table(conn, file_path, 'staging_energy_data', energy_headers)
+                print(f"Loading {file_path} into staging_hourly_energy_data")
+                copy_csv_to_table(conn, file_path, 'staging_hourly_energy_data', energy_headers)
     conn.commit()
 
 # Load outage data
 def load_outage_data(conn):
     outage_file = 'cleaned-data/outages/major_response_reporting_data_cleaned.csv'
-    print(f"Loading {outage_file} into staging_outage_data")
-    copy_csv_to_table(conn, outage_file, 'staging_outage_data', outage_headers)
+    print(f"Loading {outage_file} into staging_hourly_outage_data")
+    copy_csv_to_table(conn, outage_file, 'staging_hourly_outage_data', outage_headers)
     conn.commit()
 
 
@@ -91,8 +91,8 @@ def load_hourly_outage_data(conn):
 # Load weather data
 def load_weather_data(conn):
     weather_file = 'cleaned-data/weather/toronto_weather_cleaned.csv'
-    print(f"Loading {weather_file} into staging_weather_data")
-    copy_csv_to_table(conn, weather_file, 'staging_weather_data', weather_headers)
+    print(f"Loading {weather_file} into staging_hourly_weather_data")
+    copy_csv_to_table(conn, weather_file, 'staging_hourly_weather_data', weather_headers)
     conn.commit()
 
 # Load hourly weather data from all CSV files in the directory

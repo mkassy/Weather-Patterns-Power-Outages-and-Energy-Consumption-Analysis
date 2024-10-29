@@ -208,9 +208,9 @@ Note: replace mydatabase with the name of your database.
 Then run the following queries to check the total number of rows in each table:
 
 ```sql
-SELECT COUNT(*) FROM staging_energy_data;
-SELECT COUNT(*) FROM staging_outage_data;
-SELECT COUNT(*) FROM staging_weather_data;
+SELECT COUNT(*) FROM staging_hourly_energy_data;
+SELECT COUNT(*) FROM staging_hourly_outage_data;
+SELECT COUNT(*) FROM staging_hourly_weather_data;
 ```
 
 Then exit the psql shell by typing:
