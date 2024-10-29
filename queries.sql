@@ -1,5 +1,5 @@
 -- Create staging tables
-CREATE TABLE IF NOT EXISTS staging_energy_data (
+CREATE TABLE IF NOT EXISTS staging_hourly_energy_data (
     fsa VARCHAR(10),
     date DATE,
     hour INTEGER,
@@ -9,33 +9,33 @@ CREATE TABLE IF NOT EXISTS staging_energy_data (
     premise_count INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS staging_outage_data (
-    "Company_Name" TEXT,
-    "Year" INTEGER,
-    "Submitted_On" DATE,
-    "Event_Date" DATE,
-    "Prior_Distributor_Warning" TEXT,
-    "Event_Time" TIME,
-    "Prior_Distributor_Warning_Details" TEXT,
-    "Extra_Employees_On_Duty" TEXT,
-    "Staff_Trained_Response_Plan" TEXT,
-    "Media_Announcements" TEXT,
-    "Main_Contributing_Event" TEXT,
-    "Brief_Description" TEXT,
-    "IEEE_Standard_Used" TEXT,
-    "ETR_Issued" TEXT,
-    "ETR_Issued_Details" TEXT,
-    "Number_of_Customers_Interrupted" INTEGER,
-    "Percentage_Customers_Interrupted" NUMERIC,
-    "Hours_to_Restore_Ninety_Percent" NUMERIC,
-    "Hours_to_Restore_Ninety_Percent_Comments" TEXT,
-    "Outages_Loss_of_Supply" TEXT,
-    "Third_Party_Assistance_Details" TEXT, 
-    "Need_Equipment_or_Materials" TEXT,
-    "Future_Actions" TEXT,
-    "No_Arrangements_Extra_Employees" TEXT,  
-    "Third_Party_Assistance" TEXT
-);
+-- CREATE TABLE IF NOT EXISTS staging_outage_data (
+--     "Company_Name" TEXT,
+--     "Year" INTEGER,
+--     "Submitted_On" DATE,
+--     "Event_Date" DATE,
+--     "Prior_Distributor_Warning" TEXT,
+--     "Event_Time" TIME,
+--     "Prior_Distributor_Warning_Details" TEXT,
+--     "Extra_Employees_On_Duty" TEXT,
+--     "Staff_Trained_Response_Plan" TEXT,
+--     "Media_Announcements" TEXT,
+--     "Main_Contributing_Event" TEXT,
+--     "Brief_Description" TEXT,
+--     "IEEE_Standard_Used" TEXT,
+--     "ETR_Issued" TEXT,
+--     "ETR_Issued_Details" TEXT,
+--     "Number_of_Customers_Interrupted" INTEGER,
+--     "Percentage_Customers_Interrupted" NUMERIC,
+--     "Hours_to_Restore_Ninety_Percent" NUMERIC,
+--     "Hours_to_Restore_Ninety_Percent_Comments" TEXT,
+--     "Outages_Loss_of_Supply" TEXT,
+--     "Third_Party_Assistance_Details" TEXT, 
+--     "Need_Equipment_or_Materials" TEXT,
+--     "Future_Actions" TEXT,
+--     "No_Arrangements_Extra_Employees" TEXT,  
+--     "Third_Party_Assistance" TEXT
+-- );
 
 CREATE TABLE IF NOT EXISTS staging_hourly_outage_data (
     "UtilityName" VARCHAR(100),
@@ -47,24 +47,24 @@ CREATE TABLE IF NOT EXISTS staging_hourly_outage_data (
     "RecordDateTime" TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS staging_weather_data (
-    station VARCHAR(20),
-    name TEXT,
-    latitude NUMERIC,
-    longitude NUMERIC,
-    elevation NUMERIC,
-    date DATE,
-    prcp NUMERIC,
-    prcp_attributes TEXT,
-    snwd NUMERIC,
-    snwd_attributes TEXT,
-    tavg NUMERIC,
-    tavg_attributes TEXT,
-    tmax NUMERIC,
-    tmax_attributes TEXT,
-    tmin NUMERIC,
-    tmin_attributes TEXT
-);
+-- CREATE TABLE IF NOT EXISTS staging_weather_data (
+--     station VARCHAR(20),
+--     name TEXT,
+--     latitude NUMERIC,
+--     longitude NUMERIC,
+--     elevation NUMERIC,
+--     date DATE,
+--     prcp NUMERIC,
+--     prcp_attributes TEXT,
+--     snwd NUMERIC,
+--     snwd_attributes TEXT,
+--     tavg NUMERIC,
+--     tavg_attributes TEXT,
+--     tmax NUMERIC,
+--     tmax_attributes TEXT,
+--     tmin NUMERIC,
+--     tmin_attributes TEXT
+-- );
 
 
 CREATE TABLE IF NOT EXISTS staging_hourly_weather_data (
@@ -134,177 +134,6 @@ CREATE TABLE IF NOT EXISTS staging_hourly_weather_data_with_wind (
 );
 
 
--- Create daily energy data table if it doesn't exist
-CREATE TABLE IF NOT EXISTS toronto_energy_data AS
-SELECT 
-    fsa,
-    date,
-    price_plan,
-    customer_type,
-    SUM(total_consumption) AS daily_total_consumption_kWh,
-    SUM(premise_count) AS total_premises
-FROM 
-    staging_energy_data
-WHERE 
-    fsa LIKE 'M%'  -- Filter for Toronto FSAs (those starting with 'M')
-GROUP BY 
-    fsa, date, price_plan, customer_type 
-ORDER BY 
-    date;
-
-
--- Create toronto_outage_data table by combining data from staging_outage_data and aggregated staging_hourly_outage_data
-CREATE TABLE IF NOT EXISTS toronto_outage_data AS
--- Manually reported outages from staging_outage_data
-SELECT 
-    "Company_Name" AS "Company_Name",  -- Explicitly select "Company_Name" for clarity
-    "Year", 
-    "Submitted_On", 
-    "Event_Date", 
-    "Event_Time", 
-    "Prior_Distributor_Warning", 
-    "Main_Contributing_Event", 
-    "Brief_Description", 
-    "ETR_Issued", 
-    "ETR_Issued_Details", 
-    "Number_of_Customers_Interrupted", 
-    "Percentage_Customers_Interrupted", 
-    "Hours_to_Restore_Ninety_Percent", 
-    "Outages_Loss_of_Supply"
-FROM 
-    staging_outage_data
-WHERE 
-    "Company_Name" ILIKE '%Toronto%' 
-    OR "Company_Name" ILIKE '%GTA%'
-    OR "Brief_Description" ILIKE '%Toronto%'
-    OR "Brief_Description" ILIKE '%GTA%'
-    OR "Prior_Distributor_Warning_Details" ILIKE '%Toronto%'
-    OR "Prior_Distributor_Warning_Details" ILIKE '%GTA%'
-    OR "ETR_Issued_Details" ILIKE '%Toronto%'
-    OR "ETR_Issued_Details" ILIKE '%GTA%'
-    OR "No_Arrangements_Extra_Employees" ILIKE '%Toronto%'
-    OR "No_Arrangements_Extra_Employees" ILIKE '%GTA%'
-    OR "Third_Party_Assistance" ILIKE '%Toronto%'
-    OR "Third_Party_Assistance" ILIKE '%GTA%'
-
-UNION ALL
-
--- Aggregated hourly outages from staging_hourly_outage_data
-SELECT 
-    "UtilityName" AS "Company_Name",  -- Map "UtilityName" from hourly data to "Company_Name"
-    EXTRACT(YEAR FROM "RecordDateTime") AS "Year", 
-    NULL AS "Submitted_On", 
-    DATE("RecordDateTime") AS "Event_Date", 
-    NULL AS "Event_Time", 
-    NULL AS "Prior_Distributor_Warning", 
-    NULL AS "Main_Contributing_Event", 
-    NULL AS "Brief_Description", 
-    NULL AS "ETR_Issued", 
-    NULL AS "ETR_Issued_Details", 
-    SUM("CustomersOut") AS "Number_of_Customers_Interrupted", 
-    NULL AS "Percentage_Customers_Interrupted", 
-    NULL AS "Hours_to_Restore_Ninety_Percent", 
-    NULL AS "Outages_Loss_of_Supply"
-FROM 
-    staging_hourly_outage_data
-GROUP BY 
-    "UtilityName", EXTRACT(YEAR FROM "RecordDateTime"), DATE("RecordDateTime")
-ORDER BY 
-    "Event_Date";
-
-
--- Create toronto weather data table if it doesn't exist
-CREATE TABLE IF NOT EXISTS toronto_weather_data AS
-SELECT 
-    station,
-    latitude,
-    longitude,
-    date, 
-    prcp AS precipitation_mm, 
-    snwd AS snow_depth_mm, 
-    tavg AS avg_temperature_celsius, 
-    tmax AS max_temperature_celsius, 
-    tmin AS min_temperature_celsius
-FROM staging_weather_data
-WHERE name ILIKE '%Toronto%';
-
-
-
-
-
--- Create a combined table with energy, weather, and outage data (including non-outage days)
--- CREATE TABLE IF NOT EXISTS toronto_weather_energy_outages_data AS
--- SELECT 
---     COALESCE(to_data."Event_Date", te.date) AS date,  -- Combine the two date columns
---     te.fsa, 
---     te.customer_type,
---     te.price_plan, 
---     te.daily_total_consumption_kWh, 
---     te.total_premises,
---     tw.latitude,
---     tw.longitude,
---     tw.precipitation_mm, 
---     tw.snow_depth_mm, 
---     tw.avg_temperature_celsius, 
---     tw.max_temperature_celsius, 
---     tw.min_temperature_celsius,
---     COALESCE(to_data."Company_Name", 'No Outage') AS "Company_Name",  -- Fallback for non-outage days
---     COALESCE(to_data."Number_of_Customers_Interrupted", 0) AS "Number_of_Customers_Interrupted",  -- Default to 0 if no outage
---     COALESCE(to_data."Percentage_Customers_Interrupted", 0) AS "Percentage_Customers_Interrupted",  -- Default to 0
---     COALESCE(to_data."Hours_to_Restore_Ninety_Percent", 0) AS "Hours_to_Restore_Ninety_Percent"  -- Default to 0
--- FROM 
---     toronto_energy_data te
--- JOIN 
---     toronto_weather_data tw
--- ON 
---     te.date = tw.date
--- LEFT JOIN 
---     toronto_outage_data to_data
--- ON 
---     te.date = to_data."Event_Date"  -- Keep all rows from energy and weather data, include outages where they exist
--- ORDER BY 
---     te.date;
-
-
-
--- MASTER TABLE with HOURLY data for TORONTO
-
--- Create toronto_hourly_weather_energy_outages_data with hourly data at the city level
--- CREATE TABLE IF NOT EXISTS toronto_hourly_weather_energy_outages_data AS
--- SELECT 
---     COALESCE(sho."RecordDateTime", she.date + she.hour * INTERVAL '1 hour') AS date_hour,  -- Combine dates to retain hourly data
---     she.customer_type,
---     she.price_plan,
---     SUM(she.total_consumption) AS hourly_total_consumption_kWh, 
---     SUM(she.premise_count) AS total_premises,
---     shw.latitude_y AS latitude,
---     shw.longitude_x AS longitude,
---     AVG(shw.temp_c) AS avg_temperature_celsius,
---     AVG(shw.dew_point_temp_c) AS avg_dew_point_celsius,
---     AVG(shw.rel_hum_percent) AS avg_relative_humidity_percent,
---     SUM(shw.precip_amount_mm) AS hourly_precipitation_mm,
---     AVG(shw.wind_spd_kmh) AS avg_wind_speed_kmh,
---     AVG(shw.stn_press_kpa) AS avg_station_pressure_kpa,
---     COALESCE(sho."UtilityName", 'No Outage') AS "UtilityName",
---     COALESCE(SUM(sho."CustomersOut"), 0) AS "CustomersOut"  -- Total number of customers affected by outages hourly
--- FROM 
---     staging_energy_data she
--- JOIN 
---     staging_hourly_weather_data shw 
--- ON 
---     she.date = DATE(shw.date_time_lst) AND she.hour = EXTRACT(HOUR FROM shw.date_time_lst)  -- Matching by date and hour
--- LEFT JOIN 
---     staging_hourly_outage_data sho 
--- ON 
---     she.date = DATE(sho."RecordDateTime") AND she.hour = EXTRACT(HOUR FROM sho."RecordDateTime")  -- Matching outages by date and hour
--- WHERE 
---     she.fsa LIKE 'M%'  -- Only Toronto FSAs
--- GROUP BY 
---     date_hour, she.customer_type, she.price_plan, shw.latitude_y, shw.longitude_x, sho."UtilityName"
--- ORDER BY 
---     date_hour;
-
-
 CREATE TABLE IF NOT EXISTS merged_hourly_weather_data AS
 SELECT 
     -- Date and time for hourly data
@@ -358,3 +187,157 @@ FULL OUTER JOIN
     staging_hourly_weather_data_with_wind shww
 ON 
     shwd.date_time_lst = shww.date_time_lst;  -- Join on timestamp for hourly data alignment
+
+
+-- Create daily energy data table if it doesn't exist
+-- CREATE TABLE IF NOT EXISTS toronto_energy_data AS
+-- SELECT 
+--     fsa,
+--     date,
+--     price_plan,
+--     customer_type,
+--     SUM(total_consumption) AS daily_total_consumption_kWh,
+--     SUM(premise_count) AS total_premises
+-- FROM 
+--     staging_energy_data
+-- WHERE 
+--     fsa LIKE 'M%'  -- Filter for Toronto FSAs (those starting with 'M')
+-- GROUP BY 
+--     fsa, date, price_plan, customer_type 
+-- ORDER BY 
+--     date;
+
+
+-- city level table (aggregate data)
+
+CREATE TABLE IF NOT EXISTS toronto_city_energy_data AS
+SELECT 
+    date,
+    hour,
+    price_plan,
+    customer_type,
+    SUM(total_consumption) AS hourly_total_consumption_kWh,
+    SUM(premise_count) AS total_premises
+FROM 
+    staging_hourly_energy_data
+WHERE 
+    fsa LIKE 'M%'  -- Filter for Toronto FSAs (those starting with 'M')
+GROUP BY 
+    date, hour, price_plan, customer_type
+ORDER BY 
+    date, hour;
+
+
+-- Define weather extremes in Toronto
+CREATE TABLE IF NOT EXISTS toronto_weather_extremes AS
+SELECT 
+    date_time_lst,
+    latitude_city,
+    longitude_city,
+    latitude_intl,
+    longitude_intl,
+    station_name_city,
+    station_name_intl,
+    climate_id_city,
+    climate_id_intl,
+    
+    -- Include temperature from both sources and the calculated average rounded to two decimal places
+    temp_c_city,
+    temp_c_intl,
+    ROUND(CAST(avg_temp_celsius AS NUMERIC), 1) AS avg_temp_celsius,
+    
+    -- Dew point, humidity, and precipitation
+    ROUND(CAST(avg_dew_point_celsius AS NUMERIC), 1) AS avg_dew_point_celsius,
+    rel_hum_percent_city,
+    rel_hum_percent_intl,
+    precip_amount_mm,
+    
+    -- Wind speed, direction, and visibility
+    wind_dir_10s_deg,
+    wind_spd_kmh,
+    visibility_km,
+    
+    -- Pressure, heat index, wind chill, and weather description
+    ROUND(CAST(avg_station_pressure_kpa AS NUMERIC), 1) AS avg_station_pressure_kpa,
+    hmdx,
+    wind_chill,
+    weather
+    
+FROM 
+    merged_hourly_weather_data
+WHERE 
+    -- Temperature extremes
+    temp_c_city <= -15 OR temp_c_intl <= -15 OR temp_c_city >= 30 OR temp_c_intl >= 30
+    
+    -- High wind speed
+    OR wind_spd_kmh >= 50
+    
+    -- Low visibility
+    OR visibility_km < 1
+    
+    -- High precipitation
+    OR precip_amount_mm >= 10
+    
+    -- High or low humidity
+    OR rel_hum_percent_city >= 90 OR rel_hum_percent_intl >= 90 
+    OR rel_hum_percent_city <= 20 OR rel_hum_percent_intl <= 20
+    
+    -- Weather description indicating snow, fog, or extreme weather
+    OR weather ILIKE '%Snow%' 
+    OR weather ILIKE '%Fog%' 
+    OR weather ILIKE '%Rain%' 
+    OR weather ILIKE '%Thunderstorm%'
+ORDER BY 
+    date_time_lst;
+
+
+
+-- MASTER TABLE WITH WEATHER EXTREMES AND ENERGY, OUTAGES DATA
+
+CREATE TABLE IF NOT EXISTS toronto_combined_hourly_data AS
+SELECT
+    -- Date and time for hourly data
+    COALESCE(mhwd.date_time_lst, tce.date + tce.hour * INTERVAL '1 hour', sho."RecordDateTime") AS date_time_lst,
+
+    -- Weather data from merged_hourly_weather_data
+    mhwd.latitude_city AS latitude_weather,
+    mhwd.longitude_city AS longitude_weather,
+    mhwd.station_name_city AS station_name_weather,
+    mhwd.temp_c_city AS temp_c_weather_city,
+    mhwd.temp_c_intl AS temp_c_weather_intl,
+    ROUND(CAST(mhwd.avg_temp_celsius AS NUMERIC), 1) AS avg_temp_celsius,
+    ROUND(CAST(mhwd.avg_dew_point_celsius AS NUMERIC), 1) AS avg_dew_point_celsius,
+    mhwd.rel_hum_percent_city AS rel_humidity_weather_city,
+    mhwd.rel_hum_percent_intl AS rel_humidity_weather_intl,
+    ROUND(CAST(mhwd.precip_amount_mm AS NUMERIC), 1) AS precipitation_mm,
+    mhwd.wind_dir_10s_deg AS wind_direction,
+    ROUND(CAST(mhwd.wind_spd_kmh AS NUMERIC), 1) AS wind_speed_kmh,
+    ROUND(CAST(mhwd.visibility_km AS NUMERIC), 1) AS visibility_km,
+    ROUND(CAST(mhwd.avg_station_pressure_kpa AS NUMERIC), 1) AS avg_station_pressure_kpa,
+    ROUND(CAST(mhwd.hmdx AS NUMERIC), 1) AS heat_index,
+    ROUND(CAST(mhwd.wind_chill AS NUMERIC), 1) AS wind_chill,
+    mhwd.weather AS weather_description,
+
+    -- Energy data from toronto_city_energy_data
+    tce.price_plan,
+    tce.customer_type,
+    tce.hourly_total_consumption_kWh,
+    tce.total_premises,
+
+    -- Outage data from staging_hourly_outage_data
+    sho."UtilityName" AS outage_utility_name,
+    sho."CustomersTracked" AS customers_tracked,
+    sho."CustomersOut" AS customers_out
+
+FROM 
+    merged_hourly_weather_data mhwd
+FULL OUTER JOIN 
+    toronto_city_energy_data tce
+ON 
+    mhwd.date_time_lst = tce.date + tce.hour * INTERVAL '1 hour'
+FULL OUTER JOIN 
+    staging_hourly_outage_data sho
+ON 
+    mhwd.date_time_lst = sho."RecordDateTime"
+ORDER BY 
+    date_time_lst;
