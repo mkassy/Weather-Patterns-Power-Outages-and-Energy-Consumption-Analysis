@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS staging_hourly_weather_data_with_wind (
     weather TEXT  
 );
 
+-- merged hourly weather data (intl and city)
 
 CREATE TABLE IF NOT EXISTS merged_hourly_weather_data AS
 SELECT 
@@ -152,20 +153,37 @@ SELECT
     -- Temperature columns: Separate for each dataset, plus an average
     shwd.temp_c AS temp_c_city,  -- Temperature from City dataset
     shww.temp_c AS temp_c_intl,  -- Temperature from Toronto Intl A dataset
-    CASE 
-        WHEN shwd.temp_c IS NOT NULL AND shww.temp_c IS NOT NULL 
-            THEN (shwd.temp_c + shww.temp_c) / 2  -- Average if both values are present
-        ELSE COALESCE(shwd.temp_c, shww.temp_c)  -- Use whichever is available
-    END AS avg_temp_celsius,
-    
+    ROUND(
+        CAST(
+            CASE 
+                WHEN shwd.temp_c IS NOT NULL AND shww.temp_c IS NOT NULL 
+                    THEN (shwd.temp_c + shww.temp_c) / 2  -- Average if both values are present
+                ELSE COALESCE(shwd.temp_c, shww.temp_c)  -- Use whichever is available
+            END AS NUMERIC
+        ), 1
+    ) AS avg_temp_celsius,  -- Rounded to nearest tenth
+
     -- Dew point and relative humidity: Average or keep both
-    CASE 
-        WHEN shwd.dew_point_temp_c IS NOT NULL AND shww.dew_point_temp_c IS NOT NULL 
-            THEN (shwd.dew_point_temp_c + shww.dew_point_temp_c) / 2
-        ELSE COALESCE(shwd.dew_point_temp_c, shww.dew_point_temp_c)
-    END AS avg_dew_point_celsius,
+    ROUND(
+        CAST(
+            CASE 
+                WHEN shwd.dew_point_temp_c IS NOT NULL AND shww.dew_point_temp_c IS NOT NULL 
+                    THEN (shwd.dew_point_temp_c + shww.dew_point_temp_c) / 2
+                ELSE COALESCE(shwd.dew_point_temp_c, shww.dew_point_temp_c)
+            END AS NUMERIC
+        ), 1
+    ) AS avg_dew_point_celsius,  -- Rounded to nearest tenth
     shwd.rel_hum_percent AS rel_hum_percent_city,
     shww.rel_hum_percent AS rel_hum_percent_intl,
+    ROUND(
+        CAST(
+            CASE 
+                WHEN shwd.rel_hum_percent IS NOT NULL AND shww.rel_hum_percent IS NOT NULL 
+                    THEN (shwd.rel_hum_percent + shww.rel_hum_percent) / 2
+                ELSE COALESCE(shwd.rel_hum_percent, shww.rel_hum_percent)
+            END AS NUMERIC
+        ), 1
+    ) AS avg_rel_hum_percent,  -- Rounded to nearest tenth
     
     -- Wind data: Only from Toronto Intl A
     shww.wind_dir_10s_deg AS wind_dir_10s_deg,
@@ -174,9 +192,9 @@ SELECT
     -- Additional fields
     shww.visibility_km AS visibility_km,  -- Visibility only from Toronto Intl A
     shwd.precip_amount_mm AS precip_amount_mm,  -- Precipitation only from Toronto City
-    COALESCE(shwd.stn_press_kpa, shww.stn_press_kpa) AS avg_station_pressure_kpa,
-    COALESCE(shwd.hmdx, shww.hmdx) AS hmdx,
-    COALESCE(shwd.wind_chill, shww.wind_chill) AS wind_chill,
+    ROUND(COALESCE(CAST(shwd.stn_press_kpa AS NUMERIC), CAST(shww.stn_press_kpa AS NUMERIC)), 1) AS avg_station_pressure_kpa,  -- Rounded to nearest tenth
+    ROUND(COALESCE(CAST(shwd.hmdx AS NUMERIC), CAST(shww.hmdx AS NUMERIC)), 1) AS hmdx,  -- Rounded to nearest tenth
+    ROUND(COALESCE(CAST(shwd.wind_chill AS NUMERIC), CAST(shww.wind_chill AS NUMERIC)), 1) AS wind_chill,  -- Rounded to nearest tenth
     
     -- Weather description: Use only from Toronto Intl A dataset
     shww.weather AS weather  -- Use weather data only from Toronto Intl A
@@ -189,155 +207,131 @@ ON
     shwd.date_time_lst = shww.date_time_lst;  -- Join on timestamp for hourly data alignment
 
 
--- Create daily energy data table if it doesn't exist
--- CREATE TABLE IF NOT EXISTS toronto_energy_data AS
--- SELECT 
---     fsa,
---     date,
---     price_plan,
---     customer_type,
---     SUM(total_consumption) AS daily_total_consumption_kWh,
---     SUM(premise_count) AS total_premises
--- FROM 
---     staging_energy_data
--- WHERE 
---     fsa LIKE 'M%'  -- Filter for Toronto FSAs (those starting with 'M')
--- GROUP BY 
---     fsa, date, price_plan, customer_type 
--- ORDER BY 
---     date;
-
-
--- city level table (aggregate data)
-
-CREATE TABLE IF NOT EXISTS toronto_city_energy_data AS
+-- create daily weather data
+CREATE TABLE IF NOT EXISTS toronto_daily_weather_data AS
 SELECT 
+    -- Extract date for daily aggregation
+    CAST(DATE_TRUNC('day', date_time_lst) AS DATE) AS date,
+
+    -- Temperature: Average, Max, and Min across both stations
+    ROUND(AVG(avg_temp_celsius), 1) AS daily_avg_temp_celsius,
+    ROUND(MAX(GREATEST(temp_c_city::numeric, temp_c_intl::numeric)), 1) AS daily_max_temp_c,  -- Max temp of both stations
+    ROUND(MIN(LEAST(temp_c_city::numeric, temp_c_intl::numeric)), 1) AS daily_min_temp_c,     -- Min temp of both stations
+
+    -- Dew Point
+    ROUND(AVG(avg_dew_point_celsius), 1) AS daily_avg_dew_point_celsius,
+
+    -- Relative Humidity
+    ROUND(AVG(avg_rel_hum_percent), 1) AS avg_daily_relative_humidity,
+
+    -- Precipitation
+    ROUND(SUM(precip_amount_mm::numeric), 1) AS total_daily_precipitation_mm,
+
+    -- Wind data: Average speed and predominant direction
+    ROUND(AVG(wind_spd_kmh::numeric), 1) AS avg_daily_wind_speed_kmh,
+    MODE() WITHIN GROUP (ORDER BY wind_dir_10s_deg) AS predominant_wind_direction,  -- Most common wind direction
+
+    -- Visibility
+    ROUND(AVG(visibility_km::numeric), 1) AS avg_daily_visibility_km,
+
+    -- Station Pressure
+    ROUND(AVG(avg_station_pressure_kpa::numeric), 1) AS avg_daily_station_pressure_kpa,
+
+    -- Heat index and wind chill (daily max and min)
+    ROUND(MAX(hmdx::numeric), 1) AS max_daily_heat_index,  
+    ROUND(MIN(wind_chill::numeric), 1) AS min_daily_wind_chill,
+
+    -- Overall weather condition: Use the most frequently occurring condition of the day
+    MODE() WITHIN GROUP (ORDER BY weather) AS daily_weather_condition
+
+FROM 
+    merged_hourly_weather_data
+GROUP BY 
+    DATE_TRUNC('day', date_time_lst)
+ORDER BY 
+    date;
+
+
+
+-- toronto specific hourly energy data
+CREATE TABLE IF NOT EXISTS toronto_hourly_energy_data AS
+SELECT 
+    fsa,
     date,
     hour,
-    price_plan,
     customer_type,
-    SUM(total_consumption) AS hourly_total_consumption_kWh,
-    SUM(premise_count) AS total_premises
+    price_plan,
+    total_consumption,
+    premise_count
 FROM 
     staging_hourly_energy_data
 WHERE 
     fsa LIKE 'M%'  -- Filter for Toronto FSAs (those starting with 'M')
-GROUP BY 
-    date, hour, price_plan, customer_type
 ORDER BY 
-    date, hour;
+    date, hour, customer_type, price_plan;
 
 
--- Define weather extremes in Toronto
-CREATE TABLE IF NOT EXISTS toronto_weather_extremes AS
+-- city level table (hourly data)
+CREATE TABLE IF NOT EXISTS toronto_city_hourly_energy_data AS
 SELECT 
-    date_time_lst,
-    latitude_city,
-    longitude_city,
-    latitude_intl,
-    longitude_intl,
-    station_name_city,
-    station_name_intl,
-    climate_id_city,
-    climate_id_intl,
-    
-    -- Include temperature from both sources and the calculated average rounded to two decimal places
-    temp_c_city,
-    temp_c_intl,
-    ROUND(CAST(avg_temp_celsius AS NUMERIC), 1) AS avg_temp_celsius,
-    
-    -- Dew point, humidity, and precipitation
-    ROUND(CAST(avg_dew_point_celsius AS NUMERIC), 1) AS avg_dew_point_celsius,
-    rel_hum_percent_city,
-    rel_hum_percent_intl,
-    precip_amount_mm,
-    
-    -- Wind speed, direction, and visibility
-    wind_dir_10s_deg,
-    wind_spd_kmh,
-    visibility_km,
-    
-    -- Pressure, heat index, wind chill, and weather description
-    ROUND(CAST(avg_station_pressure_kpa AS NUMERIC), 1) AS avg_station_pressure_kpa,
-    hmdx,
-    wind_chill,
-    weather
-    
+    -- Combine date and hour to create a timestamp without time zone
+    (date + interval '1 hour' * hour) AS date_time,  -- Converts to timestamp without time zone
+    customer_type,
+    price_plan,
+    SUM(total_consumption) AS hourly_total_consumption_kWh,  -- Aggregate total consumption for the city
+    SUM(premise_count) AS total_premises  -- Aggregate premise count for the city
 FROM 
-    merged_hourly_weather_data
-WHERE 
-    -- Temperature extremes
-    temp_c_city <= -15 OR temp_c_intl <= -15 OR temp_c_city >= 30 OR temp_c_intl >= 30
-    
-    -- High wind speed
-    OR wind_spd_kmh >= 50
-    
-    -- Low visibility
-    OR visibility_km < 1
-    
-    -- High precipitation
-    OR precip_amount_mm >= 10
-    
-    -- High or low humidity
-    OR rel_hum_percent_city >= 90 OR rel_hum_percent_intl >= 90 
-    OR rel_hum_percent_city <= 20 OR rel_hum_percent_intl <= 20
-    
-    -- Weather description indicating snow, fog, or extreme weather
-    OR weather ILIKE '%Snow%' 
-    OR weather ILIKE '%Fog%' 
-    OR weather ILIKE '%Rain%' 
-    OR weather ILIKE '%Thunderstorm%'
+    toronto_hourly_energy_data
+GROUP BY 
+    date_time, customer_type, price_plan
 ORDER BY 
-    date_time_lst;
+    date_time, customer_type, price_plan;
 
 
+-- city level table (daily data)
+CREATE TABLE IF NOT EXISTS toronto_city_daily_energy_data AS
+SELECT 
+    DATE_TRUNC('day', date_time) AS date,  -- Extract date from date_time timestamp
+    customer_type,
+    price_plan,
+    SUM(hourly_total_consumption_kWh) AS daily_total_consumption_kWh,  -- Sum for daily energy use
+    MAX(total_premises) AS daily_total_premises  -- Avoid over-counting by taking the maximum
+FROM 
+    toronto_city_hourly_energy_data
+GROUP BY 
+    DATE_TRUNC('day', date_time), customer_type, price_plan
+ORDER BY 
+    date, customer_type, price_plan;
 
--- MASTER TABLE WITH WEATHER EXTREMES AND ENERGY, OUTAGES DATA
 
-CREATE TABLE IF NOT EXISTS toronto_combined_hourly_data AS
-SELECT
-    -- Date and time for hourly data
-    COALESCE(mhwd.date_time_lst, tce.date + tce.hour * INTERVAL '1 hour', sho."RecordDateTime") AS date_time_lst,
+-- create daily outage data
+CREATE TABLE IF NOT EXISTS toronto_daily_outage_data AS
+SELECT 
+    -- Truncate timestamp to date for daily aggregation
+    CAST(DATE_TRUNC('day', "RecordDateTime") AS DATE) AS date,
 
-    -- Weather data from merged_hourly_weather_data
-    mhwd.latitude_city AS latitude_weather,
-    mhwd.longitude_city AS longitude_weather,
-    mhwd.station_name_city AS station_name_weather,
-    mhwd.temp_c_city AS temp_c_weather_city,
-    mhwd.temp_c_intl AS temp_c_weather_intl,
-    ROUND(CAST(mhwd.avg_temp_celsius AS NUMERIC), 1) AS avg_temp_celsius,
-    ROUND(CAST(mhwd.avg_dew_point_celsius AS NUMERIC), 1) AS avg_dew_point_celsius,
-    mhwd.rel_hum_percent_city AS rel_humidity_weather_city,
-    mhwd.rel_hum_percent_intl AS rel_humidity_weather_intl,
-    ROUND(CAST(mhwd.precip_amount_mm AS NUMERIC), 1) AS precipitation_mm,
-    mhwd.wind_dir_10s_deg AS wind_direction,
-    ROUND(CAST(mhwd.wind_spd_kmh AS NUMERIC), 1) AS wind_speed_kmh,
-    ROUND(CAST(mhwd.visibility_km AS NUMERIC), 1) AS visibility_km,
-    ROUND(CAST(mhwd.avg_station_pressure_kpa AS NUMERIC), 1) AS avg_station_pressure_kpa,
-    ROUND(CAST(mhwd.hmdx AS NUMERIC), 1) AS heat_index,
-    ROUND(CAST(mhwd.wind_chill AS NUMERIC), 1) AS wind_chill,
-    mhwd.weather AS weather_description,
+    -- Utility and location information
+    "UtilityName",
+    "StateName",
+    "CountyName",
+    "CityName",
 
-    -- Energy data from toronto_city_energy_data
-    tce.price_plan,
-    tce.customer_type,
-    tce.hourly_total_consumption_kWh,
-    tce.total_premises,
+    -- Maximum number of customers tracked in a day (assuming it’s the peak count)
+    MAX("CustomersTracked") AS max_customers_tracked,
 
-    -- Outage data from staging_hourly_outage_data
-    sho."UtilityName" AS outage_utility_name,
-    sho."CustomersTracked" AS customers_tracked,
-    sho."CustomersOut" AS customers_out
+    -- Total customers out across the day
+    SUM("CustomersOut") AS daily_total_customers_out
 
 FROM 
-    merged_hourly_weather_data mhwd
-FULL OUTER JOIN 
-    toronto_city_energy_data tce
-ON 
-    mhwd.date_time_lst = tce.date + tce.hour * INTERVAL '1 hour'
-FULL OUTER JOIN 
-    staging_hourly_outage_data sho
-ON 
-    mhwd.date_time_lst = sho."RecordDateTime"
+    staging_hourly_outage_data
+GROUP BY 
+    CAST(DATE_TRUNC('day', "RecordDateTime") AS DATE),
+    "UtilityName",
+    "StateName",
+    "CountyName",
+    "CityName"
 ORDER BY 
-    date_time_lst;
+    date, "UtilityName";
+
+
+
