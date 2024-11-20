@@ -207,7 +207,7 @@ ON
     shwd.date_time_lst = shww.date_time_lst;  -- Join on timestamp for hourly data alignment
 
 
--- create daily weather data
+-- Create daily weather data
 CREATE TABLE IF NOT EXISTS toronto_daily_weather_data AS
 SELECT 
     -- Extract date for daily aggregation
@@ -227,8 +227,11 @@ SELECT
     -- Precipitation
     ROUND(SUM(precip_amount_mm::numeric), 1) AS total_daily_precipitation_mm,
 
-    -- Wind data: Average speed and predominant direction
-    ROUND(AVG(wind_spd_kmh::numeric), 1) AS avg_daily_wind_speed_kmh,
+    -- Wind data: Average speed and maximum speed
+    ROUND(AVG(wind_spd_kmh::numeric), 1) AS avg_daily_wind_speed_kmh,  -- Average daily wind speed
+    ROUND(MAX(wind_spd_kmh::numeric), 1) AS max_daily_wind_speed_kmh,  -- Maximum daily wind speed
+
+    -- Predominant wind direction
     MODE() WITHIN GROUP (ORDER BY wind_dir_10s_deg) AS predominant_wind_direction,  -- Most common wind direction
 
     -- Visibility
@@ -250,6 +253,7 @@ GROUP BY
     DATE_TRUNC('day', date_time_lst)
 ORDER BY 
     date;
+
 
 
 
@@ -279,7 +283,7 @@ SELECT
     customer_type,
     price_plan,
     SUM(total_consumption) AS hourly_total_consumption_kWh,  -- Aggregate total consumption for the city
-    SUM(premise_count) AS total_premises  -- Aggregate premise count for the city
+    MAX(premise_count) AS max_hourly_premises  -- max hourly premise count
 FROM 
     toronto_hourly_energy_data
 GROUP BY 
@@ -291,15 +295,15 @@ ORDER BY
 -- city level table (daily data)
 CREATE TABLE IF NOT EXISTS toronto_city_daily_energy_data AS
 SELECT 
-    DATE_TRUNC('day', date_time) AS date,  -- Extract date from date_time timestamp
+    CAST(DATE_TRUNC('day', date_time) AS DATE) AS date,  -- Extract date from date_time and cast to DATE
     customer_type,
     price_plan,
     SUM(hourly_total_consumption_kWh) AS daily_total_consumption_kWh,  -- Sum for daily energy use
-    MAX(total_premises) AS daily_total_premises  -- Avoid over-counting by taking the maximum
+    MAX(max_hourly_premises) AS max_daily_premises  -- Avoid over-counting by taking the maximum
 FROM 
     toronto_city_hourly_energy_data
 GROUP BY 
-    DATE_TRUNC('day', date_time), customer_type, price_plan
+    date, customer_type, price_plan
 ORDER BY 
     date, customer_type, price_plan;
 
@@ -319,8 +323,8 @@ SELECT
     -- Maximum number of customers tracked in a day (assuming it’s the peak count)
     MAX("CustomersTracked") AS max_customers_tracked,
 
-    -- Total customers out across the day
-    SUM("CustomersOut") AS daily_total_customers_out
+    -- Maximum number of customers out at any point during the day
+    MAX("CustomersOut") AS daily_max_customers_out
 
 FROM 
     staging_hourly_outage_data
@@ -334,4 +338,59 @@ ORDER BY
     date, "UtilityName";
 
 
+-- create outage duration table
+CREATE TABLE IF NOT EXISTS outage_duration AS
+WITH OutageEvents AS (
+    SELECT 
+        "UtilityName",
+        "StateName",
+        "CountyName",
+        "CityName",
+        "CustomersTracked",
+        "CustomersOut",
+        "RecordDateTime",
+        -- Use LAG to detect if there was a gap in the outage sequence
+        CASE 
+            WHEN LAG("CustomersOut") OVER (PARTITION BY "UtilityName", "StateName", "CountyName", "CityName" ORDER BY "RecordDateTime") = 0 
+                 OR LAG("RecordDateTime") OVER (PARTITION BY "UtilityName", "StateName", "CountyName", "CityName" ORDER BY "RecordDateTime") IS NULL
+                 OR DATE_PART('hour', "RecordDateTime" - LAG("RecordDateTime") OVER (PARTITION BY "UtilityName", "StateName", "CountyName", "CityName" ORDER BY "RecordDateTime")) > 1
+            THEN 1
+            ELSE 0
+        END AS new_event_flag
+    FROM 
+        staging_hourly_outage_data
+    WHERE 
+        "CustomersOut" > 0
+),
+EventGroups AS (
+    SELECT *,
+        -- Create a cumulative sum to uniquely identify each outage event
+        SUM(new_event_flag) OVER (PARTITION BY "UtilityName", "StateName", "CountyName", "CityName" ORDER BY "RecordDateTime") AS event_id
+    FROM OutageEvents
+),
+EventDurations AS (
+    SELECT 
+        "UtilityName",
+        "StateName",
+        "CountyName",
+        "CityName",
+        MIN("RecordDateTime") AS start_time,
+        MAX("RecordDateTime") AS end_time
+    FROM 
+        EventGroups
+    GROUP BY 
+        "UtilityName", "StateName", "CountyName", "CityName", event_id
+)
 
+SELECT 
+    "UtilityName",
+    "StateName",
+    "CountyName",
+    "CityName",
+    start_time,
+    end_time,
+    ROUND(EXTRACT(EPOCH FROM (end_time - start_time)) / 3600) AS outage_duration_hours  -- Round to nearest hour
+FROM 
+    EventDurations
+ORDER BY 
+    "UtilityName", "StateName", "CountyName", "CityName", start_time;

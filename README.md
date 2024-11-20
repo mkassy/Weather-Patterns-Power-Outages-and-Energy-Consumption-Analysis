@@ -6,9 +6,9 @@ This project analyzes the relationship between weather patterns, residential ene
 
 1. [Introduction](#introduction)
 2. [Datasets](#datasets)
-   - [Weather Data](#weather-data)
-   - [Energy Consumption Data](#energy-consumption-data)
-   - [Power Outage Data](#power-outage-data)
+   - [Hourly Weather Data](#weather-data)
+   - [Hourly Energy Consumption Data](#energy-consumption-data)
+   - [Hourly Power Outage Data](#power-outage-data)
 3. [Setup](#setup)
    - [Requirements](#requirements)
    - [Installation](#installation)
@@ -37,7 +37,7 @@ The goal of this project is to explore how extreme weather conditions affect ene
 
 ### Weather Data
 
-- **Source:** [NCEI](https://www.ncei.noaa.gov/cdo-web/search)
+- **Source:** [Environment And Climate Change Canada](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html)
 - **Coverage:** 2014-01-01 to 2024-08-25
 - **Types of Data:** Temperature highs/lows, precipitation, storm frequency, etc.
 - **Format:** CSV
@@ -50,8 +50,9 @@ The goal of this project is to explore how extreme weather conditions affect ene
 
 ### Power Outage Data
 
-- **Source:** [OEB](https://www.oeb.ca/open-data/electricity-reporting-record-keeping-requirements-rrr-section-214210-major-event-response)
-- **Coverage:** 2016-01-01 to 2023-01-01
+<!-- - **Source:** [OEB](https://www.oeb.ca/open-data/electricity-reporting-record-keeping-requirements-rrr-section-214210-major-event-response) -->
+- **Source:** [PowerOutage.com/ca](https://poweroutage.com/ca)
+- **Coverage:** 2021-09-08 to 2024-09-29
 - **Types of Data:** Frequency, duration, and causes of power outages
 
 ## Setup

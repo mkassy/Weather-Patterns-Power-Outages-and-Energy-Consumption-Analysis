@@ -5,7 +5,8 @@ import csv
 # Specify the file path (modify as needed)
 # file_path = 'cleaned-data/energy/FSA_2018_cleaned/PUB_HourlyConsumptionByFSA_201801_v1_cleaned.csv'
 # file_path = 'cleaned-data/outages/major_response_reporting_data_cleaned.csv'
-file_path = 'cleaned-data/weather/toronto_weather_cleaned.csv'
+# file_path = 'cleaned-data/weather/toronto_weather_cleaned.csv'
+file_path = 'cleaned-data/outages/toronto_hourly_outages.csv'
 
 # Open and print the header row
 with open(file_path, 'r') as file:
