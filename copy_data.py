@@ -28,7 +28,6 @@ hourly_outage_data_headers = [
     '"CustomersTracked"', '"CustomersOut"', '"RecordDateTime"'
 ]
 
-
 weather_headers = [
     'station', 'name', 'latitude', 'longitude', 'elevation', 'date', 'prcp', 'prcp_attributes', 
     'snwd', 'snwd_attributes', 'tavg', 'tavg_attributes', 'tmax', 'tmax_attributes', 'tmin', 
@@ -54,8 +53,10 @@ def copy_csv_to_table(conn, file_path, table_name, headers, encoding='UTF-8'):
         with open(file_path, 'r', encoding=encoding) as f:
             copy_query = f"COPY {table_name} ({columns}) FROM STDIN WITH CSV HEADER NULL AS ''"
             cursor.copy_expert(copy_query, f)
+        conn.commit()  # Commit if successful
         print(f"Data from {file_path} loaded into {table_name} successfully.")
     except Exception as e:
+        conn.rollback()  # Rollback transaction if there is an error
         print(f"Error loading {file_path} into {table_name}: {str(e)}")
     finally:
         cursor.close()
@@ -69,15 +70,12 @@ def load_energy_data(conn):
                 file_path = os.path.join(root, file)
                 print(f"Loading {file_path} into staging_hourly_energy_data")
                 copy_csv_to_table(conn, file_path, 'staging_hourly_energy_data', energy_headers)
-    conn.commit()
 
 # Load outage data
 def load_outage_data(conn):
     outage_file = 'cleaned-data/outages/major_response_reporting_data_cleaned.csv'
     print(f"Loading {outage_file} into staging_hourly_outage_data")
     copy_csv_to_table(conn, outage_file, 'staging_hourly_outage_data', outage_headers)
-    conn.commit()
-
 
 # Load hourly outage data 
 def load_hourly_outage_data(conn):
@@ -85,15 +83,12 @@ def load_hourly_outage_data(conn):
     print(f"Loading {hourly_outage_data_file} into staging_hourly_outage_data")
     # Pass 'UTF-16' as the encoding argument for this dataset
     copy_csv_to_table(conn, hourly_outage_data_file, 'staging_hourly_outage_data', hourly_outage_data_headers, encoding='UTF-16')
-    conn.commit()
-
 
 # Load weather data
 def load_weather_data(conn):
     weather_file = 'cleaned-data/weather/toronto_weather_cleaned.csv'
     print(f"Loading {weather_file} into staging_hourly_weather_data")
     copy_csv_to_table(conn, weather_file, 'staging_hourly_weather_data', weather_headers)
-    conn.commit()
 
 # Load hourly weather data from all CSV files in the directory
 def load_hourly_weather_data(conn):
@@ -105,7 +100,6 @@ def load_hourly_weather_data(conn):
                 print(f"Loading {file_path} into staging_hourly_weather_data")
                 # Use 'UTF-8-SIG' for the weather data
                 copy_csv_to_table(conn, file_path, 'staging_hourly_weather_data', hourly_weather_data_headers, encoding='UTF-8-SIG')
-    conn.commit()
 
 # Load hourly weather data with wind from all CSV files in the directory
 def load_hourly_weather_data_with_wind(conn):
@@ -117,7 +111,6 @@ def load_hourly_weather_data_with_wind(conn):
                 print(f"Loading {file_path} into staging_hourly_weather_data_with_wind")
                 # Use 'UTF-8-SIG' for the weather data
                 copy_csv_to_table(conn, file_path, 'staging_hourly_weather_data_with_wind', hourly_weather_data_headers, encoding='UTF-8-SIG')
-    conn.commit()
 
 # Main function to establish connection and load data
 def main():
@@ -129,12 +122,12 @@ def main():
         print("Database connection successful")
 
         # Load energy data, outage data, and weather data
-        # load_energy_data(conn)
+        load_energy_data(conn)
         # load_outage_data(conn)
         # load_hourly_outage_data(conn)
         # load_weather_data(conn)
         # load_hourly_weather_data(conn)
-        load_hourly_weather_data_with_wind(conn)
+        # load_hourly_weather_data_with_wind(conn)
 
         # Close the connection
         conn.close()

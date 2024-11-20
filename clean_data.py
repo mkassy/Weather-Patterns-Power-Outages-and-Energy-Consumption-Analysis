@@ -231,12 +231,12 @@ def main():
     create_cleaned_data_directory()
     
     # Clean each dataset
-    # clean_energy_data()
+    clean_energy_data()
     # clean_outage_data()
     # clean_weather_data()
     # Run the cleaning function for both directories
     # clean_hourly_weather_data(toronto_hourly_weather_dir, toronto_hourly_weather_cleaned_dir)
-    clean_hourly_weather_data(toronto_hourly_weather_with_wind_dir, toronto_hourly_weather_with_wind_cleaned_dir)
+    # clean_hourly_weather_data(toronto_hourly_weather_with_wind_dir, toronto_hourly_weather_with_wind_cleaned_dir)
 
 if __name__ == "__main__":
     main()
