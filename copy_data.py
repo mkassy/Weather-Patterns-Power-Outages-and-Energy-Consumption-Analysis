@@ -34,6 +34,17 @@ weather_headers = [
     'tmin_attributes'
 ]
 
+daily_weather_headers = [
+    "longitude", "latitude", "station_name", "climate_id", "date_time",
+    "year", "month", "day", "data_quality", "max_temp_c", "max_temp_flag",
+    "min_temp_c", "min_temp_flag", "mean_temp_c", "mean_temp_flag",
+    "heat_deg_days_c", "heat_deg_days_flag", "cool_deg_days_c",
+    "cool_deg_days_flag", "total_rain_mm", "total_rain_flag", "total_snow_cm",
+    "total_snow_flag", "total_precip_mm", "total_precip_flag", "snow_on_grnd_cm",
+    "snow_on_grnd_flag", "dir_of_max_gust_deg", "dir_of_max_gust_flag",
+    "spd_of_max_gust_kmh", "spd_of_max_gust_flag"
+]
+
 # Headers for hourly weather data
 hourly_weather_data_headers = [
     'longitude_x', 'latitude_y', 'station_name', 'climate_id', 'date_time_lst',
@@ -112,6 +123,17 @@ def load_hourly_weather_data_with_wind(conn):
                 # Use 'UTF-8-SIG' for the weather data
                 copy_csv_to_table(conn, file_path, 'staging_hourly_weather_data_with_wind', hourly_weather_data_headers, encoding='UTF-8-SIG')
 
+# Load daily weather data
+def load_daily_weather_data(conn):
+    daily_weather_dir = 'cleaned-data/weather/toronto_daily_weather_with_prcp_cleaned'
+    for root, _, files in os.walk(daily_weather_dir):
+        for file in files:
+            if file.endswith('_cleaned.csv'):
+                file_path = os.path.join(root, file)
+                print(f"Loading {file_path} into staging_daily_weather_data")
+                copy_csv_to_table(conn, file_path, 'staging_daily_weather_data', daily_weather_headers)
+
+
 # Main function to establish connection and load data
 def main():
     try:
@@ -122,12 +144,13 @@ def main():
         print("Database connection successful")
 
         # Load energy data, outage data, and weather data
-        load_energy_data(conn)
+        # load_energy_data(conn)
         # load_outage_data(conn)
         # load_hourly_outage_data(conn)
         # load_weather_data(conn)
         # load_hourly_weather_data(conn)
         # load_hourly_weather_data_with_wind(conn)
+        load_daily_weather_data(conn)
 
         # Close the connection
         conn.close()

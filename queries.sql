@@ -207,6 +207,41 @@ ON
     shwd.date_time_lst = shww.date_time_lst;  -- Join on timestamp for hourly data alignment
 
 
+CREATE TABLE IF NOT EXISTS staging_daily_weather_data (
+    longitude FLOAT,
+    latitude FLOAT,
+    station_name VARCHAR(255),
+    climate_id VARCHAR(50),
+    date_time DATE,
+    year INT,
+    month INT,
+    day INT,
+    data_quality VARCHAR(10),
+    max_temp_c FLOAT,
+    max_temp_flag VARCHAR(10),
+    min_temp_c FLOAT,
+    min_temp_flag VARCHAR(10),
+    mean_temp_c FLOAT,
+    mean_temp_flag VARCHAR(10),
+    heat_deg_days_c FLOAT,
+    heat_deg_days_flag VARCHAR(10),
+    cool_deg_days_c FLOAT,
+    cool_deg_days_flag VARCHAR(10),
+    total_rain_mm FLOAT,
+    total_rain_flag VARCHAR(10),
+    total_snow_cm FLOAT,
+    total_snow_flag VARCHAR(10),
+    total_precip_mm FLOAT,
+    total_precip_flag VARCHAR(10),
+    snow_on_grnd_cm FLOAT,
+    snow_on_grnd_flag VARCHAR(10),
+    dir_of_max_gust_deg FLOAT,
+    dir_of_max_gust_flag VARCHAR(10),
+    spd_of_max_gust_kmh FLOAT,
+    spd_of_max_gust_flag VARCHAR(10)
+);
+
+
 -- Create daily weather data
 CREATE TABLE IF NOT EXISTS toronto_daily_weather_data AS
 SELECT 

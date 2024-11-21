@@ -219,6 +219,50 @@ def clean_hourly_weather_data(weather_base_dir, cleaned_weather_dir):
             except Exception as e:
                 print(f"Error processing file {file_path}: {e}")
 
+
+def clean_daily_weather_data():
+    # Define paths
+    base_dir = 'data/weather/toronto_daily_weather_with_prcp'
+    cleaned_dir = 'cleaned-data/weather/toronto_daily_weather_with_prcp_cleaned'
+    
+    # Create the cleaned directory if it doesn't exist
+    if not os.path.exists(cleaned_dir):
+        os.makedirs(cleaned_dir)
+    
+    # Loop through all CSV files in the base directory
+    for filename in os.listdir(base_dir):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(base_dir, filename)
+            try:
+                # Load the weather data CSV file
+                weather_df = pd.read_csv(file_path)
+
+                # Clean and preprocess the data
+                # Replace 'M' (missing values) with NaN
+                weather_df.replace('M', pd.NA, inplace=True)
+
+                # Handle missing values: Fill strings with '', numbers with 0
+                str_cols = weather_df.select_dtypes(include=['object']).columns
+                num_cols = weather_df.select_dtypes(include=['float64', 'int64']).columns
+
+                weather_df[str_cols] = weather_df[str_cols].fillna('')  # Fill string columns with empty strings
+                weather_df[num_cols] = weather_df[num_cols].fillna(0)   # Fill numeric columns with 0
+
+                # Standardize the date format if a date column exists
+                if 'Date/Time' in weather_df.columns:
+                    weather_df['Date/Time'] = pd.to_datetime(weather_df['Date/Time'], errors='coerce')
+
+                # Drop rows with all NaN (if any metadata or completely empty rows exist)
+                weather_df.dropna(how='all', inplace=True)
+
+                # Save cleaned data
+                cleaned_file_path = os.path.join(cleaned_dir, filename.replace('.csv', '_cleaned.csv'))
+                weather_df.to_csv(cleaned_file_path, index=False)
+                print(f"Cleaned daily weather data saved to {cleaned_file_path}")
+                
+            except Exception as e:
+                print(f"Error processing file {file_path}: {e}")
+
 # Define paths for Toronto City and Toronto Intl A data
 toronto_hourly_weather_dir = 'data/weather/toronto_hourly_weather'
 toronto_hourly_weather_cleaned_dir = 'cleaned-data/weather/toronto_hourly_weather_cleaned'
@@ -228,15 +272,16 @@ toronto_hourly_weather_with_wind_cleaned_dir = 'cleaned-data/weather/toronto_hou
 
 def main():
     # Create the cleaned-data directory structure
-    create_cleaned_data_directory()
+    # create_cleaned_data_directory()
     
     # Clean each dataset
-    clean_energy_data()
+    # clean_energy_data()
     # clean_outage_data()
     # clean_weather_data()
     # Run the cleaning function for both directories
     # clean_hourly_weather_data(toronto_hourly_weather_dir, toronto_hourly_weather_cleaned_dir)
     # clean_hourly_weather_data(toronto_hourly_weather_with_wind_dir, toronto_hourly_weather_with_wind_cleaned_dir)
+    clean_daily_weather_data()
 
 if __name__ == "__main__":
     main()
